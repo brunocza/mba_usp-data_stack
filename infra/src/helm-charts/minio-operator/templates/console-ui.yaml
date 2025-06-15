@@ -271,3 +271,4 @@ data:
 kind: ConfigMap
 metadata:
   name: console-env
+  namespace: {{ .Release.Namespace }} # Added namespace
