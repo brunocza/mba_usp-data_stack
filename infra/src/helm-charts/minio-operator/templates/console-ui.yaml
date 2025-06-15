@@ -2,11 +2,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: console-sa
+  namespace: {{ .Release.Namespace }} # Added namespace
 ---
 apiVersion: v1
 kind: Secret
 metadata:
   name: console-sa-secret
+  namespace: {{ .Release.Namespace }} # Added namespace
   annotations:
     kubernetes.io/service-account.name: console-sa
 type: kubernetes.io/service-account-token
