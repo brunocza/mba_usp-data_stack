@@ -110,7 +110,7 @@ tenant:
   ## MinIO features to enable or disable in the MinIO Tenant
   ## https://github.com/minio/operator/blob/master/docs/tenant_crd.adoc#features
   features:
-    # bucketDNS: false
+    bucketDNS: false
     # domains: {}
     # bucketDNS: true
     # domains:
