@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: coredns
+  namespace: kube-system
+data:
+  Corefile: |
+    .:53 {
+        errors
+        health {
+            lameduck 5s
+        }
+        ready
+        rewrite name suffix cluster.local k8s-demo-01.local
+        kubernetes k8s-demo-01.local in-addr.arpa ip6.arpa {
+          pods insecure
+          fallthrough in-addr.arpa ip6.arpa
+        }
+        prometheus :9153
+        forward . 8.8.8.8 8.8.4.4 {
+          prefer_udp
+          max_concurrent 1000
+        }
+        cache 30
+
+        loop
+        reload
+        loadbalance
+    }
+
+
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: coredns
+#   namespace: kube-system
+# data:
+#   Corefile: |
+#     .:53 {
+#                 errors
+#         health {
+#             lameduck 5s
+#         }
+#         ready
+#         kubernetes k8s-demo-01.local in-addr.arpa ip6.arpa {
+#           pods insecure
+#           fallthrough in-addr.arpa ip6.arpa
+#         }
+#         prometheus :9153
+#         forward . /etc/resolv.conf {
+#           prefer_udp
+#           max_concurrent 1000
+#         }
+#         cache 30
+
+#         loop
+#         reload
+#         loadbalance
+#     }

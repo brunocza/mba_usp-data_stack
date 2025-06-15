@@ -1,0 +1,26 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grafana
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
+    path: infra/src/helm-charts/grafana
+    targetRevision: HEAD
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    name: in-cluster
+    namespace: monitorability
+    server: ''
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+
+# kubectl get secret --namespace monitorability grafana -o jsonpath="{.data.admin-password}" | base64 --decode ; echo

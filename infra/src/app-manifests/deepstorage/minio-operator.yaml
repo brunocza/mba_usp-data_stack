@@ -1,0 +1,54 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: minio-operator
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
+    path: infra/src/helm-charts/minio-operator
+    targetRevision: main
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+      name: in-cluster
+      namespace: deepstorage
+      server: ''
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
+
+
+
+##
+
+# apiVersion: argoproj.io/v1alpha1
+# kind: Application
+# metadata:
+#   name: minio-operator
+#   namespace: gitops
+# spec:
+#   destination:
+#     name: kubernetes-admin@k8s-demo-01.local
+#     namespace: deepstorage
+#     server: ''
+#   source:
+#     path: infra/src/helm-charts/minio-operator
+#     repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
+#     targetRevision: main
+#     helm:
+#       valueFiles:
+#         - values.yaml
+#   sources: []
+#   project: default
+#   syncPolicy:
+#     syncOptions:
+#       - CreateNamespace=true
+#     automated:
+#       prune: true
+#       selfHeal: true
