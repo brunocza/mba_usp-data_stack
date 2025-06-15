@@ -11,6 +11,7 @@ secrets:
 tenant:
   # Tenant name
   name: datalake
+  namespace: deepstorage # Added namespace for the tenant
   ## Registry location and Tag to download MinIO Server image
   clusterDomain: k8s-demo-01.local
   image:

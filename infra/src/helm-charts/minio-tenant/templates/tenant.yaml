@@ -3,7 +3,7 @@ apiVersion: minio.min.io/v2
 kind: Tenant
 metadata:
   name: {{ .name }}
-  namespace: {{ .Release.Namespace }} # Added namespace
+  namespace: {{ .namespace }} # Changed to use namespace from values
   # namespace: deepstorage
   ## Optionally pass labels to be applied to the statefulset pods
   labels:
