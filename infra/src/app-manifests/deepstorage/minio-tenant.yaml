@@ -10,7 +10,7 @@ spec:
     server: ''
   source:
     path: infra/src/helm-charts/minio-tenant
-    repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
+    repoURL: 'git@github.com:brunocza/mba_usp-data_stack.git'
     targetRevision: main
     helm:
       valueFiles:

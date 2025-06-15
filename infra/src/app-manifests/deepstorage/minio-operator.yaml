@@ -6,7 +6,7 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
+    repoURL: 'git@github.com:brunocza/mba_usp-data_stack.git'
     path: infra/src/helm-charts/minio-operator
     targetRevision: main
     helm:

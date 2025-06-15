@@ -22,7 +22,7 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
-
+id_ed25519_mba_stack*
 # Ignore transient lock info files created by terraform apply
 .terraform.tfstate.lock.info
 
