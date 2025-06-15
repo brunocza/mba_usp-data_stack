@@ -43,7 +43,7 @@ tenant:
       size: 10Gi
       ## storageClass specifies the storage class name to be used for this pool
       # storageClassName: default
-      storageClassName: nfs-client
+      storageClassName: local-path # Changed from nfs-client
       ## Used to specify annotations for pods
       annotations: { }
       ## Used to specify labels for pods
