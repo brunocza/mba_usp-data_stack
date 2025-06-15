@@ -254,7 +254,10 @@ existingConfigmap: ""
 ## @param configdFiles Extra configuration files to be mounted at config.d
 ## ref: https://clickhouse.com/docs/operations/configuration-files
 ##
-configdFiles: {}
+configdFiles:
+  empty.xml: |
+    <yandex>
+    </yandex>
 ## @param existingConfigdConfigmap The name of an existing ConfigMap with extra configuration files for ClickHouse
 ##
 existingConfigdConfigmap: ""

@@ -7,17 +7,20 @@ spec:
   project: default
   source:
     repoURL: 'git@github.com:brunocza/mba_usp-data_stack.git'
-    targetRevision: HEAD
+    targetRevision: main
     path: infra/src/helm-charts/clickhouse/clickhouse
     helm:
       valueFiles:
         - values.yaml
   destination:
-    server: 'https://kubernetes.default.svc'
+    name: in-cluster
+    server: ''
     namespace: warehouse
+  sources: []
   syncPolicy:
     automated:
       prune: true
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
+
