@@ -297,11 +297,11 @@ startdbScripts: {}
 startdbScriptsSecret: ""
 ## @param shards Number of ClickHouse shards to deploy
 ##
-shards: 2
+shards: 1
 ## @param replicaCount Number of ClickHouse replicas per shard to deploy
 ## if keeper enable, same as keeper count, keeper cluster by shards.
 ##
-replicaCount: 3
+replicaCount: 1
 ## @param distributeReplicasByZone Schedules replicas of the same shard to different availability zones
 ##
 distributeReplicasByZone: false
@@ -912,7 +912,7 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: ""
+  storageClass: "local-path"
   ## @param persistence.labels Persistent Volume Claim labels
   ##
   labels: {}
@@ -980,7 +980,7 @@ keeper:
     debug: false
   ## @param keeper.replicaCount Number of ClickHouse Keeper replicas to deploy
   ##
-  replicaCount: 3
+  replicaCount: 1
   ## @param keeper.configuration Specify content for ClickHouse Keeper configuration (basic one auto-generated based on other values otherwise)
   ##
   configuration: {}
@@ -990,7 +990,10 @@ keeper:
   ## @param keeper.configdFiles Extra configuration files to be mounted at keeper_config.d
   ## ref: https://clickhouse.com/docs/operations/configuration-files
   ##
-  configdFiles: {}
+  configdFiles:
+    empty.xml: |
+      <yandex>
+      </yandex>
   ## @param keeper.existingConfigdConfigmap The name of an existing ConfigMap with extra configuration files for ClickHouse Keeper
   ##
   existingConfigdConfigmap: ""
@@ -1453,7 +1456,7 @@ keeper:
     ## If undefined (the default) or set to null, no storageClassName spec is
     ## set, choosing the default provisioner.
     ##
-    storageClass: ""
+    storageClass: "local-path"
     ## @param keeper.persistence.accessModes Persistent Volume Access Modes
     ##
     accessModes:
