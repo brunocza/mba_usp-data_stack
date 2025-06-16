@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
-    path: infra/src/helm-charts/airflow
-    targetRevision: HEAD
+    repoURL: 'git@github.com:brunocza/mba_usp-data_stack.git'
+    path: infra/src/helm-charts/airflow-official
+    targetRevision: main
     helm:
       valueFiles:
         - values.yaml
@@ -16,9 +16,10 @@ spec:
     name: in-cluster
     namespace: orchestrator
     server: ''
+  sources: []
   syncPolicy:
-    # syncOptions:
-    #   - CreateNamespace=true
+    syncOptions:
+      - CreateNamespace=true
     automated:
       prune: true
       selfHeal: true
