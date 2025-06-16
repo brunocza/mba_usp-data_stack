@@ -946,7 +946,7 @@ persistence:
 keeper:
   ## @param keeper.enabled Deploy ClickHouse Keeper to provide coordination capabilities
   ##
-  enabled: true
+  enabled: false
   ## Bitnami ClickHouse Keeper image
   ## ref: https://hub.docker.com/r/bitnami/clickhouse-keeper/tags/
   ## @param keeper.image.registry [default: REGISTRY_NAME] ClickHouse Keeper image registry
