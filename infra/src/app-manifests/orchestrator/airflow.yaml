@@ -14,7 +14,7 @@ spec:
         - values.yaml
   destination:
     name: in-cluster
-    namespace: orchestrator
+    namespace: orchestrator2
     server: ''
   sources: []
   syncPolicy:
