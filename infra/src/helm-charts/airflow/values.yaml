@@ -626,7 +626,7 @@ workers:
     # Enable persistent volumes
     enabled: true
     # Volume size for worker StatefulSet
-    size: 100Gi
+    size: 10Gi
     # If using a custom storageClass, pass name ref to all statefulSets here
     storageClassName: local-path
     # Execute init container to chown log directory.
@@ -1434,9 +1434,9 @@ triggerer:
     # Enable persistent volumes
     enabled: true
     # Volume size for triggerer StatefulSet
-    size: 100Gi
+    size: 15Gi
     # If using a custom storageClass, pass name ref to all statefulSets here
-    storageClassName: nfs-client
+    storageClassName: local-path
     # Execute init container to chown log directory.
     # This is currently only needed in kind, due to usage
     # of local-path provisioner.
@@ -2138,7 +2138,7 @@ redis:
     # Volume size for worker StatefulSet
     size: 1Gi
     # If using a custom storageClass, pass name ref to all statefulSets here
-    storageClassName: nfs-client
+    storageClassName: local-path
     # Annotations to add to redis volumes
     annotations: {}
 
@@ -2438,7 +2438,7 @@ dags:
     # Volume size for dags
     size: 1Gi
     # If using a custom storageClass, pass name here
-    storageClassName: nfs-client
+    storageClassName: local-path
     # access mode of the persistent volume
     accessMode: ReadWriteOnce
     ## the name of an existing PVC to use
@@ -2542,10 +2542,10 @@ logs:
     # Enable persistent volume for storing logs
     enabled: false
     # Volume size for logs
-    size: 100Gi
+    size: 10Gi
     # Annotations for the logs PVC
     annotations: {}
     # If using a custom storageClass, pass name here
-    storageClassName: nfs-client
+    storageClassName: local-path
     ## the name of an existing PVC to use
     existingClaim:
