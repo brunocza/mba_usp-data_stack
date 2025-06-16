@@ -2049,7 +2049,8 @@ flower:
   secretName: ~
 
   # Else, if username and password are set, create secret from username and password
-  username: ~
+  # Otherwise a new password will be generated on install
+  # Note: password can only be set during install, not upgrade.
   password: ~
 
   service:
@@ -2746,7 +2747,7 @@ podTemplate: ~
 dags:
   # Where dags volume will be mounted. Works for both persistence and gitSync.
   # If not specified, dags mount path will be set to $AIRFLOW_HOME/dags
-  mountPath: ~
+  mountPath: /opt/airflow/dags
   persistence:
     # Annotations for dags PVC
     annotations: {}
@@ -2763,22 +2764,22 @@ dags:
     ## optional subpath for dag volume mount
     subPath: ~
   gitSync:
-    enabled: false
+    enabled: true
 
     # git repo clone url
     # ssh example: git@github.com:apache/airflow.git
     # https example: https://github.com/apache/airflow.git
-    repo: https://github.com/apache/airflow.git
-    branch: v2-2-stable
+    repo: git@github.com:brunocza/mba_usp-data_stack.git
+    branch: main
     rev: HEAD
     # The git revision (branch, tag, or hash) to check out, v4 only
-    ref: v2-2-stable
+    ref: main
     depth: 1
     # the number of consecutive failures allowed before aborting
     maxFailures: 0
     # subpath within the repo where dags are located
     # should be "" if dags are at repo root
-    subPath: "tests/dags"
+    subPath: "dags"
     # if your repo needs a user name password
     # you can load them to a k8s secret like the one below
     #   ---
@@ -2809,20 +2810,15 @@ dags:
     #     # key needs to be gitSshKey
     #     gitSshKey: <base64_encoded_data>
     # and specify the name of the secret below
-    # sshKeySecret: airflow-ssh-secret
+    sshKeySecret: git-credentials-secret
     #
     # Or set sshKeySecret with your key
-    # sshKey: |-
-    #   -----BEGIN {OPENSSH PRIVATE KEY}-----
-    #   ...
-    #   -----END {OPENSSH PRIVATE KEY}-----
+    # sshKey: |-\n    #   -----BEGIN {OPENSSH PRIVATE KEY}-----\n    #   ...\n    #   -----END {OPENSSH PRIVATE KEY}-----
     #
     # If you are using an ssh private key, you can additionally
     # specify the content of your known_hosts file, example:
     #
-    # knownHosts: |
-    #    <host1>,<ip1> <key1>
-    #    <host2>,<ip2> <key2>
+    # knownHosts: |\n    #    <host1>,<ip1> <key1>\n    #    <host2>,<ip2> <key2>
 
     # interval between git sync attempts in seconds
     # high values are more likely to cause DAGs to become out of sync between different components
