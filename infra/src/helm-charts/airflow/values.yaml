@@ -571,10 +571,10 @@ workers:
     cooldownPeriod: 30
 
     # Minimum number of workers created by keda
-    minReplicaCount: 3
+    minReplicaCount: 1
 
     # Maximum number of workers created by keda
-    maxReplicaCount: 5
+    maxReplicaCount: 2
 
     # Specify HPA related options
     advanced: {}
@@ -608,7 +608,7 @@ workers:
     minReplicaCount: 0
 
     # Maximum number of workers created by HPA
-    maxReplicaCount: 5
+    maxReplicaCount: 2
 
     # Specifications for which to use to calculate the desired replica count
     metrics:
