@@ -912,7 +912,7 @@ persistence:
   ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
   ##   GKE, AWS & OpenStack)
   ##
-  storageClass: "local-path"
+  storageClass: ""
   ## @param persistence.labels Persistent Volume Claim labels
   ##
   labels: {}
@@ -1456,7 +1456,7 @@ keeper:
     ## If undefined (the default) or set to null, no storageClassName spec is
     ## set, choosing the default provisioner.
     ##
-    storageClass: "local-path"
+    storageClass: ""
     ## @param keeper.persistence.accessModes Persistent Volume Access Modes
     ##
     accessModes:
