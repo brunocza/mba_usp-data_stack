@@ -1148,7 +1148,7 @@ createUserJob:
   priorityClassName: ~
   # In case you need to disable the helm hooks that create the jobs after install.
   # Disable this if you are using ArgoCD for example
-  useHelmHooks: true
+  useHelmHooks: false
   applyCustomEnv: true
 
   env: []
@@ -1251,7 +1251,7 @@ migrateDatabaseJob:
   priorityClassName: ~
   # In case you need to disable the helm hooks that create the jobs after install.
   # Disable this if you are using ArgoCD for example
-  useHelmHooks: true
+  useHelmHooks: false
   applyCustomEnv: true
   env: []
 
@@ -2436,7 +2436,7 @@ redis:
     enabled: true
     # Volume size for worker StatefulSet
     size: 1Gi
-    # If using a custom storageClass, pass name ref to all statefulSets here
+    # If using a custom storageClass, pass name here
     storageClassName:
     # Annotations to add to redis volumes
     annotations: {}
