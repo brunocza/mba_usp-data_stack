@@ -35,4 +35,7 @@ id_ed25519_mba_stack*
 .terraformrc
 terraform.rc
 .terraform.lock.hcl
+
+
+ssh-credentials-secret.*
 ssh-credentials-secret.yaml
