@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: airflow10-run-airflow-migrations
+  namespace: orchestrator2
+  labels:
+    tier: airflow
+    component: run-airflow-migrations
+    release: airflow10
+spec:
+  ttlSecondsAfterFinished: 300
+  template:
+    metadata:
+      labels:
+        tier: airflow
+        component: run-airflow-migrations
+        release: airflow10
+    spec:
+      securityContext: {}
+      restartPolicy: OnFailure
+      serviceAccountName: airflow10-migrate-database-job
+      containers:
+        - name: run-airflow-migrations
+          image: apache/airflow:2.10.5
+          imagePullPolicy: IfNotPresent
+          args:
+            - "bash"
+            - "-c"
+            - >-
+              exec airflow db migrate
+          env:
+            - name: AIRFLOW__CORE__FERNET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: airflow10-fernet-key
+                  key: fernet-key
+            - name: AIRFLOW_HOME
+              value: /opt/airflow
+            - name: AIRFLOW__CORE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: airflow10-metadata
+                  key: connection
+            - name: AIRFLOW__DATABASE__SQL_ALCHEMY_CONN
+              valueFrom:
+                secretKeyRef:
+                  name: airflow10-metadata
+                  key: connection
+            - name: AIRFLOW_CONN_AIRFLOW_DB
+              valueFrom:
+                secretKeyRef:
+                  name: airflow10-metadata
+                  key: connection
+            - name: AIRFLOW__WEBSERVER__SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: airflow10-webserver-secret-key
+                  key: webserver-secret-key
+            - name: AIRFLOW__CELERY__BROKER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: airflow10-broker-url
+                  key: connection
+          volumeMounts:
+            - name: config
+              mountPath: /opt/airflow/airflow.cfg
+              subPath: airflow.cfg
+              readOnly: true
+            - name: config
+              mountPath: /opt/airflow/config/airflow_local_settings.py
+              subPath: airflow_local_settings.py
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: airflow10-config
