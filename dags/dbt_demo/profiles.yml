@@ -1,0 +1,17 @@
+dbt_demo:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      driver: native
+      host: clickhouse.warehouse.svc.cluster.local
+      port: 9000
+      user: admin
+      password: admin
+      schema: dbt_demo
+      secure: false
+      verify: false
+      connect_timeout: 10
+      send_receive_timeout: 300
+      sync_request_timeout: 5
+      compress_block_size: 1048576
