@@ -737,14 +737,38 @@ dashboardProviders:
   dashboardproviders.yaml:
     apiVersion: 1
     providers:
-      - name: 'default'
+      - name: cluster
         orgId: 1
-        folder: ''
+        folder: Cluster
         type: file
         disableDeletion: false
         editable: true
         options:
-          path: /var/lib/grafana/dashboards/default
+          path: /var/lib/grafana/dashboards/cluster
+      - name: airflow
+        orgId: 1
+        folder: Airflow
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/airflow
+      - name: clickhouse
+        orgId: 1
+        folder: ClickHouse
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/clickhouse
+      - name: minio
+        orgId: 1
+        folder: MinIO
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/minio
 #  dashboardproviders.yaml:
 #    apiVersion: 1
 #    providers:
@@ -764,23 +788,22 @@ dashboardProviders:
 ## dashboards per provider, use provider name as key.
 ##
 dashboards:
-  default:
-    # === Kubernetes cluster ===
+  cluster:
     node-exporter-full:
       file: dashboards/node-exporter-full.json
     k8s-cluster-overview:
       file: dashboards/k8s-cluster-overview.json
     k8s-pods:
       file: dashboards/k8s-pods.json
-    # === Airflow ===
+  airflow:
     airflow-monitoring:
       file: dashboards/airflow-monitoring.json
     airflow-cluster:
       file: dashboards/airflow-cluster.json
-    # === ClickHouse ===
+  clickhouse:
     clickhouse:
       file: dashboards/clickhouse.json
-    # === MinIO ===
+  minio:
     minio-cluster:
       file: dashboards/minio-cluster.json
     minio-bucket:
