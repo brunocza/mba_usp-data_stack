@@ -8,14 +8,17 @@ metadata:
   namespace: orchestrator2
 spec:
   hard:
-    requests.cpu: "6"
-    requests.memory: 8Gi
-    limits.cpu: "10"
-    limits.memory: 12Gi
+    requests.cpu: "8"
+    requests.memory: 10Gi
+    limits.cpu: "14"
+    limits.memory: 16Gi
     pods: "50"
 ---
-# LimitRange — pods criados sem resources.requests/limits recebem estes defaults,
-# evitando que qualquer container futuro vaze sem contenção.
+# LimitRange — pods criados sem resources.requests/limits recebem estes defaults.
+# Valores BAIXOS porque os principais workloads (scheduler, worker, etc.) já
+# declaram resources no values.yaml do chart. Os sidecars que caem aqui
+# (git-sync, log-groomer, dbt-docs, statsd) consomem muito pouco e não
+# justificam defaults agressivos que inflariam o total por pod.
 apiVersion: v1
 kind: LimitRange
 metadata:
@@ -25,11 +28,11 @@ spec:
   limits:
     - type: Container
       default:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 200m
+        memory: 256Mi
       defaultRequest:
-        cpu: 50m
-        memory: 128Mi
+        cpu: 20m
+        memory: 64Mi
       max:
         cpu: "4"
         memory: 4Gi
