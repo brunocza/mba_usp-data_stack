@@ -244,7 +244,7 @@ logLevel: information
 ## @param sampling.enabled Enable logging tables collected by sampling query profiler
 ##
 sampling:
-  enabled: false
+  enabled: true
 ## @param configuration Specify content for ClickHouse configuration (basic one auto-generated based on other values otherwise)
 ##
 configuration: {}
