@@ -5,45 +5,29 @@
 ) }}
 
 -- Silver: tipos forçados, filtros de qualidade, métricas derivadas.
--- Mantém todas as 24 colunas originais e adiciona:
---   waiting_minutes        — entre request e pickup (proxy de demanda)
---   on_scene_to_pickup_min — quanto tempo o motorista esperou
---   trip_minutes           — duração total da viagem
---   total_amount           — soma de fare + tolls + bcf + sales_tax + cs + airport + tips
---   net_to_driver_pct      — percentual do total que vai pro motorista
+-- Colunas slim: removidas as strings repetidas (license_num, base_num) que
+-- inflam o tamanho da tabela; nenhum modelo gold depende delas.
 with raw as (
     select * from {{ source('bronze', 'fhvhv_trips') }}
 )
 select
-    hvfhs_license_num,
-    dispatching_base_num,
-    originating_base_num,
-    request_datetime                                          as request_at,
-    on_scene_datetime                                         as on_scene_at,
     pickup_datetime                                           as pickup_at,
     dropoff_datetime                                          as dropoff_at,
     toUInt16OrNull(toString(PULocationID))                    as pickup_location_id,
     toUInt16OrNull(toString(DOLocationID))                    as dropoff_location_id,
     toFloat32(trip_miles)                                     as trip_miles,
-    toFloat32(trip_time)                                      as trip_seconds,
     toFloat32(base_passenger_fare)                            as base_fare,
-    toFloat32(tolls)                                          as tolls,
-    toFloat32(bcf)                                            as black_car_fund,
-    toFloat32(sales_tax)                                      as sales_tax,
-    toFloat32(congestion_surcharge)                           as congestion_surcharge,
-    toFloat32(airport_fee)                                    as airport_fee,
     toFloat32(tips)                                           as tips,
+    toFloat32(congestion_surcharge)                           as congestion_surcharge,
     toFloat32(driver_pay)                                     as driver_pay,
     shared_request_flag = 'Y'                                 as shared_requested,
     shared_match_flag   = 'Y'                                 as shared_matched,
     access_a_ride_flag  = 'Y'                                 as access_a_ride,
     wav_request_flag    = 'Y'                                 as wav_requested,
-    wav_match_flag      = 'Y'                                 as wav_matched,
 
     -- métricas derivadas
-    dateDiff('minute', request_datetime, pickup_datetime)     as waiting_minutes,
-    dateDiff('minute', on_scene_datetime, pickup_datetime)    as on_scene_to_pickup_min,
-    dateDiff('minute', pickup_datetime, dropoff_datetime)     as trip_minutes,
+    toUInt16(dateDiff('minute', request_datetime, pickup_datetime))   as waiting_minutes,
+    toUInt16(dateDiff('minute', pickup_datetime, dropoff_datetime))   as trip_minutes,
     toFloat32(base_passenger_fare + tolls + bcf + sales_tax
               + congestion_surcharge + airport_fee + tips)    as total_amount,
     if(base_passenger_fare > 0,

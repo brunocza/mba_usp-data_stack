@@ -1,8 +1,4 @@
-{{ config(
-    materialized='table',
-    order_by='pickup_at',
-    settings={'allow_nullable_key': 1}
-) }}
+{{ config(materialized='view') }}
 
 -- Silver enriched: junta com bronze.taxi_zones pra resolver os IDs de PU/DO
 -- em (borough, zone) tanto pro pickup quanto pro dropoff. Output usado pelos
@@ -13,7 +9,6 @@ with trips as (
 select
     t.pickup_at,
     t.dropoff_at,
-    t.request_at,
     t.waiting_minutes,
     t.trip_minutes,
     t.trip_miles,
@@ -26,7 +21,6 @@ select
     t.shared_matched,
     t.wav_requested,
     t.access_a_ride,
-    t.hvfhs_license_num,
 
     pu.Borough  as pickup_borough,
     pu.Zone     as pickup_zone,
