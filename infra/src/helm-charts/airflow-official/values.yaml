@@ -3553,9 +3553,14 @@ config:
     statsd_host: '{{ printf "%s-statsd" (include "airflow.fullname" .) }}'
   fab:
     enable_proxy_fix: 'True'
+  api:
+    # Expose airflow.cfg in the UI under Admin > Configurations
+    expose_config: 'True'
   webserver:
     # For Airflow 2.X
     enable_proxy_fix: 'True'
+    # Back-compat for 2.x UI (ignored by Airflow 3 api-server)
+    expose_config: 'True'
   celery:
     flower_url_prefix: '{{ ternary "" .Values.ingress.flower.path (eq .Values.ingress.flower.path "/") }}'
     worker_concurrency: 16
