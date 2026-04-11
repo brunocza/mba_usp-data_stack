@@ -1233,7 +1233,7 @@ extraScrapeConfigs: |
     metrics_path: /metrics
     scheme: http
     static_configs:
-      - targets: ['clickhouse.warehouse.svc.cluster.local:9363']
+      - targets: ['clickhouse.warehouse.svc.cluster.local:8001']
         labels:
           app: clickhouse
   # - job_name: 'prometheus-blackbox-exporter'
