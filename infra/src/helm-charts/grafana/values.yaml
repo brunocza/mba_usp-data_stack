@@ -615,7 +615,16 @@ plugins: []
 ## Configure grafana datasources
 ## ref: http://docs.grafana.org/administration/provisioning/#datasources
 ##
-datasources: {}
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.monitorability.svc.cluster.local
+        access: proxy
+        isDefault: true
+        editable: true
 #  datasources.yaml:
 #    apiVersion: 1
 #    datasources:
@@ -724,7 +733,18 @@ notifiers: {}
 ##
 ## `path` must be /var/lib/grafana/dashboards/<provider_name>
 ##
-dashboardProviders: {}
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: 'default'
+        orgId: 1
+        folder: ''
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
 #  dashboardproviders.yaml:
 #    apiVersion: 1
 #    providers:
@@ -743,7 +763,40 @@ dashboardProviders: {}
 ##
 ## dashboards per provider, use provider name as key.
 ##
-dashboards: {}
+dashboards:
+  default:
+    # === Kubernetes cluster ===
+    node-exporter-full:
+      gnetId: 1860
+      revision: 37
+      datasource: Prometheus
+    k8s-cluster-overview:
+      gnetId: 7249
+      revision: 1
+      datasource: Prometheus
+    k8s-pods:
+      gnetId: 6417
+      revision: 1
+      datasource: Prometheus
+    # === Airflow (statsd) ===
+    airflow:
+      gnetId: 9092
+      revision: 1
+      datasource: Prometheus
+    # === ClickHouse ===
+    clickhouse:
+      gnetId: 14192
+      revision: 5
+      datasource: Prometheus
+    # === MinIO ===
+    minio-cluster:
+      gnetId: 13502
+      revision: 26
+      datasource: Prometheus
+    minio-bucket:
+      gnetId: 19237
+      revision: 2
+      datasource: Prometheus
   # default:
   #   some-dashboard:
   #     json: |
