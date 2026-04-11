@@ -767,36 +767,24 @@ dashboards:
   default:
     # === Kubernetes cluster ===
     node-exporter-full:
-      gnetId: 1860
-      revision: 37
-      datasource: Prometheus
+      file: dashboards/node-exporter-full.json
     k8s-cluster-overview:
-      gnetId: 7249
-      revision: 1
-      datasource: Prometheus
+      file: dashboards/k8s-cluster-overview.json
     k8s-pods:
-      gnetId: 6417
-      revision: 1
-      datasource: Prometheus
-    # === Airflow (statsd) ===
-    airflow:
-      gnetId: 9092
-      revision: 1
-      datasource: Prometheus
+      file: dashboards/k8s-pods.json
+    # === Airflow ===
+    airflow-monitoring:
+      file: dashboards/airflow-monitoring.json
+    airflow-cluster:
+      file: dashboards/airflow-cluster.json
     # === ClickHouse ===
     clickhouse:
-      gnetId: 14192
-      revision: 5
-      datasource: Prometheus
+      file: dashboards/clickhouse.json
     # === MinIO ===
     minio-cluster:
-      gnetId: 13502
-      revision: 26
-      datasource: Prometheus
+      file: dashboards/minio-cluster.json
     minio-bucket:
-      gnetId: 19237
-      revision: 2
-      datasource: Prometheus
+      file: dashboards/minio-bucket.json
   # default:
   #   some-dashboard:
   #     json: |
