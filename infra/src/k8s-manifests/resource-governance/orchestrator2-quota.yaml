@@ -1,0 +1,35 @@
+---
+# ResourceQuota — contém o blast radius do stress test no namespace do Airflow
+# Soma de requests+limits dos pods do ns não pode ultrapassar estes valores.
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: orchestrator2-quota
+  namespace: orchestrator2
+spec:
+  hard:
+    requests.cpu: "6"
+    requests.memory: 8Gi
+    limits.cpu: "10"
+    limits.memory: 12Gi
+    pods: "50"
+---
+# LimitRange — pods criados sem resources.requests/limits recebem estes defaults,
+# evitando que qualquer container futuro vaze sem contenção.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: orchestrator2-defaults
+  namespace: orchestrator2
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 512Mi
+      defaultRequest:
+        cpu: 50m
+        memory: 128Mi
+      max:
+        cpu: "4"
+        memory: 4Gi
