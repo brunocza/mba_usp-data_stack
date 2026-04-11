@@ -388,10 +388,15 @@ allowJobLaunching: false
 
 # Environment variables for all airflow containers
 env:
-  # Install dbt-core + dbt-clickhouse at pod startup (official image entrypoint).
-  # Adds ~30s to pod boot. Simpler than a custom image for study environments.
+  # Pin pip to the official Airflow 3.1.8 constraint file. Without this,
+  # _PIP_ADDITIONAL_REQUIREMENTS resolves freely and ends up downgrading
+  # airflow-core to satisfy cosmos's transitive deps (broke providers).
+  - name: PIP_CONSTRAINT
+    value: "https://raw.githubusercontent.com/apache/airflow/constraints-3.1.8/constraints-3.12.txt"
+  # Install dbt-core + dbt-clickhouse + Cosmos at pod startup. Simpler than
+  # a custom image for the study env, though slower at boot (~60s extra).
   - name: _PIP_ADDITIONAL_REQUIREMENTS
-    value: "dbt-core~=1.8.0 dbt-clickhouse~=1.8.0 astronomer-cosmos>=1.7.0,<1.10.0"
+    value: "dbt-core==1.8.9 dbt-clickhouse==1.8.9 astronomer-cosmos==1.9.2"
 
 # Volumes for all airflow containers
 volumes: []
