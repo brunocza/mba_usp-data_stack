@@ -92,7 +92,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -142,7 +142,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -162,7 +162,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -212,7 +212,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -232,7 +232,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -282,7 +282,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -309,7 +309,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -349,7 +349,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket,api) (increase(minio_bucket_requests_4xx_errors_total{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -401,7 +401,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -441,7 +441,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket,api) (increase(minio_bucket_requests_inflight_total{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -493,7 +493,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -533,7 +533,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket,api) (increase(minio_bucket_requests_total{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -585,7 +585,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -625,7 +625,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (rate(minio_bucket_traffic_sent_bytes{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -677,7 +677,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -717,7 +717,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (rate(minio_bucket_usage_total_bytes{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -769,7 +769,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -809,7 +809,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (increase(minio_bucket_usage_object_total{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -861,7 +861,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -901,7 +901,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (increase(minio_bucket_usage_version_total{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -953,7 +953,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -993,7 +993,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (increase(minio_bucket_usage_deletemarker_total{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -1134,7 +1134,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1174,7 +1174,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (rate(minio_bucket_traffic_received_bytes{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -1226,7 +1226,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1266,7 +1266,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_received_bytes{job=\"$scrape_jobs\"})",
@@ -1318,7 +1318,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1358,7 +1358,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_sent_bytes{job=\"$scrape_jobs\"})",
@@ -1410,7 +1410,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1450,7 +1450,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_total_failed_bytes{job=\"$scrape_jobs\"})",
@@ -1502,7 +1502,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1542,7 +1542,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_total_failed_count{job=\"$scrape_jobs\"})",
@@ -1594,7 +1594,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1634,7 +1634,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_received_count{job=\"$scrape_jobs\"})",
@@ -1686,7 +1686,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1726,7 +1726,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_sent_count{job=\"$scrape_jobs\"})",
@@ -1778,7 +1778,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1818,7 +1818,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (rate(minio_bucket_replication_last_hour_failed_bytes{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -1870,7 +1870,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -1910,7 +1910,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_last_hour_failed_count{job=\"$scrape_jobs\"})",
@@ -1962,7 +1962,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2002,7 +2002,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (rate(minio_bucket_replication_last_minute_failed_bytes{job=\"$scrape_jobs\"}[$__rate_interval]))",
@@ -2054,7 +2054,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2094,7 +2094,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_last_minute_failed_count{job=\"$scrape_jobs\"})",
@@ -2139,7 +2139,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fieldConfig": {
         "defaults": {
@@ -2189,7 +2189,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "exemplar": true,
@@ -2216,7 +2216,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2256,7 +2256,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_proxied_head_requests_total{job=\"$scrape_jobs\"})",
@@ -2308,7 +2308,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2348,7 +2348,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "minio_bucket_replication_proxied_head_requests_failures{job=\"$scrape_jobs\"}",
@@ -2400,7 +2400,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2440,7 +2440,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_proxied_put_tagging_requests_total{job=\"$scrape_jobs\"})",
@@ -2492,7 +2492,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2532,7 +2532,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "minio_bucket_replication_proxied_put_tagging_requests_failures{job=\"$scrape_jobs\"}",
@@ -2584,7 +2584,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2624,7 +2624,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_proxied_get_tagging_requests_total{job=\"$scrape_jobs\"})",
@@ -2676,7 +2676,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2716,7 +2716,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "minio_bucket_replication_proxied_get_tagging_requests_failures{job=\"$scrape_jobs\"}",
@@ -2768,7 +2768,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2808,7 +2808,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_proxied_delete_tagging_requests_total{job=\"$scrape_jobs\"})",
@@ -2860,7 +2860,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2900,7 +2900,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "minio_bucket_replication_proxied_delete_tagging_requests_failures{job=\"$scrape_jobs\"}",
@@ -2952,7 +2952,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -2992,7 +2992,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "sum by (bucket) (minio_bucket_replication_proxied_get_requests_total{job=\"$scrape_jobs\"})",
@@ -3044,7 +3044,7 @@
       "dashes": false,
       "datasource": {
         "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
+        "uid": "prometheus"
       },
       "fill": 1,
       "fillGradient": 0,
@@ -3084,7 +3084,7 @@
         {
           "datasource": {
             "type": "prometheus",
-            "uid": "${DS_PROMETHEUS}"
+            "uid": "prometheus"
           },
           "exemplar": true,
           "expr": "minio_bucket_replication_proxied_get_requests_failures{job=\"$scrape_jobs\"}",
@@ -3139,7 +3139,7 @@
         "current": {},
         "datasource": {
           "type": "prometheus",
-          "uid": "${DS_PROMETHEUS}"
+          "uid": "prometheus"
         },
         "definition": "label_values(job)",
         "hide": 0,

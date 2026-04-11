@@ -59,7 +59,7 @@
     {
       "cacheTimeout": null,
       "columns": [],
-      "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -539,7 +539,7 @@
       "type": "table-old"
     },
     {
-      "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {
           "mappings": [
@@ -633,7 +633,7 @@
     },
     {
       "columns": [],
-      "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -824,7 +824,7 @@
     {
       "cacheTimeout": null,
       "columns": [],
-      "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -984,7 +984,7 @@
     },
     {
       "columns": [],
-      "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1117,7 +1117,7 @@
     },
     {
       "columns": [],
-      "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+      "datasource": "prometheus",
       "fieldConfig": {
         "defaults": {},
         "overrides": []
@@ -1292,7 +1292,7 @@
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_AIRFLOW_POSTGRESQL}",
+        "datasource": "prometheus",
         "definition": "select dag_id from public.dag ",
         "description": null,
         "error": null,
