@@ -48,4 +48,7 @@ ENDERECOS-CLUSTER.md
 # Claude Code local tooling
 .claude/
 .mcp.json
+
+# Local dbt dev sandbox — never commit
+dev/
 ssh-credentials-secret.yaml

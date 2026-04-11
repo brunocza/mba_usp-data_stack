@@ -1892,6 +1892,9 @@ apiServer:
     ports:
       - name: api-server
         port: "{{ .Values.ports.apiServer }}"
+      - name: dbt-docs
+        port: 8081
+        targetPort: 8081
 
     loadBalancerIP: ~
     ## Limit load balancer source ips to list of CIDRs
@@ -1928,7 +1931,44 @@ apiServer:
       container: {}
 
   # Launch additional containers into the Airflow API server pods.
-  extraContainers: []
+  extraContainers:
+    - name: dbt-docs
+      image: apache/airflow:3.1.8
+      imagePullPolicy: IfNotPresent
+      ports:
+        - name: dbt-docs
+          containerPort: 8081
+      envFrom:
+        - secretRef:
+            name: clickhouse-credentials
+      command: ["bash", "-c"]
+      args:
+        - |
+          set -eu
+          pip install --user --quiet "dbt-core~=1.8.0" "dbt-clickhouse~=1.8.0"
+          export PATH="$HOME/.local/bin:$PATH"
+          rm -rf /tmp/repo
+          git clone --depth 1 https://github.com/brunocza/mba_usp-data_stack.git /tmp/repo
+          cd /tmp/repo/dags/dbt_demo
+          export DBT_PROFILES_DIR=.
+          mkdir -p target
+          dbt docs generate --no-version-check || echo "(initial dbt docs generate failed; will retry in loop)"
+          cd target
+          python3 -m http.server 8081 --bind 0.0.0.0 &
+          SERVER_PID=$!
+          while true; do
+            sleep 600
+            (cd /tmp/repo && git pull --ff-only) || true
+            (cd /tmp/repo/dags/dbt_demo && DBT_PROFILES_DIR=. dbt docs generate --no-version-check) || true
+          done
+          wait $SERVER_PID
+      readinessProbe:
+        httpGet:
+          path: /
+          port: 8081
+        initialDelaySeconds: 90
+        periodSeconds: 10
+        failureThreshold: 30
   # Add additional init containers into API server (templated).
   extraInitContainers: []
 
