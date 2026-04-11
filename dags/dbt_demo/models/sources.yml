@@ -1,9 +1,11 @@
 version: 2
 
 sources:
-  - name: bronze_nyc_taxi
-    description: "Camada bronze — cópia 1:1 dos parquets desembarcados no MinIO pelo Airflow."
-    schema: bronze_nyc_taxi
+  - name: bronze
+    description: "Camada raw — cópia 1:1 dos arquivos desembarcados no MinIO."
+    schema: bronze
     tables:
-      - name: yellow_tripdata_raw
-        description: "Dump bruto do parquet yellow_tripdata_2024-01 do TLC NYC."
+      - name: fhvhv_trips
+        description: "12 meses de viagens HVFHV (Uber/Lyft) 2023, ~5.5 GB de parquet."
+      - name: taxi_zones
+        description: "Dimensão de zonas TLC: 265 zonas em 5 boroughs de NYC."

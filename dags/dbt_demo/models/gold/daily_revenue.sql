@@ -1,14 +1,17 @@
-{{ config(materialized='table') }}
+{{ config(materialized='table', order_by='trip_date') }}
 
--- Gold: receita agregada por dia.
+-- Receita e volume diário, agregando todas as viagens 2023.
 select
-    toDate(pickup_at)                    as trip_date,
-    count()                              as total_trips,
-    round(sum(total_amount), 2)          as total_revenue_usd,
-    round(sum(tip_amount), 2)            as total_tips_usd,
-    round(avg(trip_distance_miles), 3)   as avg_distance_miles,
-    round(avg(duration_minutes), 2)      as avg_duration_min,
-    round(quantile(0.5)(total_amount), 2) as median_fare_usd
-from {{ ref('yellow_tripdata_clean') }}
+    toDate(pickup_at)                       as trip_date,
+    count()                                 as total_trips,
+    round(sum(total_amount), 2)             as gross_revenue_usd,
+    round(sum(driver_pay), 2)               as total_driver_pay_usd,
+    round(sum(tips), 2)                     as total_tips_usd,
+    round(sum(congestion_surcharge), 2)     as total_congestion_usd,
+    round(avg(trip_miles), 2)               as avg_trip_miles,
+    round(avg(trip_minutes), 2)             as avg_trip_minutes,
+    round(avg(waiting_minutes), 2)          as avg_waiting_minutes,
+    round(quantile(0.5)(total_amount), 2)   as median_fare_usd,
+    round(quantile(0.95)(total_amount), 2)  as p95_fare_usd
+from {{ ref('fhvhv_trips_clean') }}
 group by trip_date
-order by trip_date

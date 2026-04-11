@@ -17,14 +17,11 @@ clean-targets:
 
 models:
   dbt_demo:
-    example:
-      +materialized: table
-      +schema: dbt_demo
     silver:
       +materialized: table
-      +schema: silver_nyc_taxi
+      +schema: silver
       +tags: ["silver"]
     gold:
       +materialized: table
-      +schema: gold_nyc_taxi
+      +schema: gold
       +tags: ["gold"]
