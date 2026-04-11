@@ -53,7 +53,8 @@ def ingest_bronze():
         f"""
         CREATE TABLE bronze_nyc_taxi.yellow_tripdata_raw
         ENGINE = MergeTree()
-        ORDER BY tpep_pickup_datetime
+        ORDER BY tuple()
+        SETTINGS allow_nullable_key = 1
         AS SELECT * FROM s3(
             '{s3_url}',
             '{ak}', '{sk}',
