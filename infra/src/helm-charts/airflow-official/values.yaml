@@ -959,7 +959,13 @@ workers:
 
   # Resource configuration for Airflow Celery workers and pods created with pod-template-file
   # (deprecated, use workers.celery.resources or/and workers.kubernetes.resources instead)
-  resources: {}
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2000m
+      memory: 2Gi
   #  limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -1508,7 +1514,13 @@ scheduler:
       maxUnavailable: 1
       # minAvailable: 1
 
-  resources: {}
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
   #  limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -2012,7 +2024,13 @@ apiServer:
       ports:
         - port: "{{ .Values.ports.apiServer }}"
 
-  resources: {}
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
   #   limits:
   #     cpu: 100m
   #     memory: 128Mi
@@ -2184,7 +2202,13 @@ webserver:
       ports:
         - port: "{{ .Values.ports.airflowUI }}"
 
-  resources: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
   #   limits:
   #     cpu: 100m
   #     memory: 128Mi
@@ -2386,7 +2410,13 @@ triggerer:
       maxUnavailable: 1
       # minAvailable: 1
 
-  resources: {}
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
   #  limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -2635,7 +2665,13 @@ dagProcessor:
   # container level lifecycle hooks
   containerLifecycleHooks: {}
 
-  resources: {}
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
   #  limits:
   #   cpu: 100m
   #   memory: 128Mi
@@ -2970,7 +3006,13 @@ statsd:
 
   # Additional network policies as needed
   extraNetworkPolicies: []
-  resources: {}
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
   #   limits:
   #     cpu: 100m
   #     memory: 128Mi
@@ -3279,7 +3321,13 @@ redis:
   #   sizeLimit: 1Gi
   #   medium: Memory
 
-  resources: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
   #  limits:
   #   cpu: 100m
   #   memory: 128Mi

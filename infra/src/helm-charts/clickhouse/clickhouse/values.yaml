@@ -394,8 +394,10 @@ resourcesPreset: "none"
 ##
 resources:
   requests:
+    cpu: 1000m
     memory: 8Gi
   limits:
+    cpu: 4000m
     memory: 8Gi
 ## Configure Pods Security Context
 ## ref: https://kubernetes.io/docs/tasks/configure-pod-container/security-context/#set-the-security-context-for-a-pod
