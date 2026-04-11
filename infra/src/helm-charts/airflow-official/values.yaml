@@ -515,7 +515,10 @@ data:
 
   metadataSecretName: ~
   resultBackendSecretName: ~
-  brokerUrlSecretName: ~
+  # Pin to out-of-band secret so ArgoCD re-renders don't regenerate a new
+  # Redis password on every sync (helm's randAlphaNum is non-deterministic
+  # under client-side rendering, which breaks Celery auth after each sync).
+  brokerUrlSecretName: airflow10-stable-redis
 
   # Otherwise pass connection values in
   metadataConnection:
@@ -547,9 +550,12 @@ data:
   brokerUrlSecretAnnotations: {}
 
 # Fernet key settings
-# Note: fernetKey can only be set during install, not upgrade
+# Pin all generated secrets to externally-managed K8s secrets so ArgoCD
+# re-renders don't regenerate new random values on every sync (client-side
+# helm rendering cannot preserve randAlphaNum between runs).
+# The referenced secrets live in ns orchestrator2 and were created out-of-band.
 fernetKey: ~
-fernetKeySecretName: ~
+fernetKeySecretName: airflow10-stable-fernet
 # Add custom annotations to the fernet key secret
 fernetKeySecretAnnotations: {}
 
@@ -557,19 +563,19 @@ fernetKeySecretAnnotations: {}
 apiSecretKey: ~
 # Add custom annotations to the api secret
 apiSecretAnnotations: {}
-apiSecretKeySecretName: ~
+apiSecretKeySecretName: airflow10-stable-api
 
 # Secret key used to encode and decode JWTs: `[api_auth] jwt_secret` in airflow.cfg
 jwtSecret: ~
 # Add custom annotations to the JWT secret
 jwtSecretAnnotations: {}
-jwtSecretName: ~
+jwtSecretName: airflow10-stable-jwt
 
 # Flask secret key for Airflow <3 Webserver: `[webserver] secret_key` in airflow.cfg
 webserverSecretKey: ~
 # Add custom annotations to the webserver secret
 webserverSecretAnnotations: {}
-webserverSecretKeySecretName: ~
+webserverSecretKeySecretName: airflow10-stable-websec
 
 # In order to use kerberos you need to create secret containing the keytab file
 # The secret name should follow naming convention of the application where resources are
@@ -3242,7 +3248,7 @@ redis:
   #   memory: 128Mi
 
   # If set use as redis secret. Make sure to also set data.brokerUrlSecretName value.
-  passwordSecretName: ~
+  passwordSecretName: airflow10-stable-redis
 
   # Else, if password is set, create secret with it,
   # Otherwise a new password will be generated on install
