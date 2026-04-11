@@ -45,4 +45,7 @@ id_ed25519*
 
 # Local docs with credentials — never commit
 ENDERECOS-CLUSTER.md
+
+# Claude Code local tooling
+.claude/
 ssh-credentials-secret.yaml
