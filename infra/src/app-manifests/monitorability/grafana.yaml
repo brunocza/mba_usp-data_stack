@@ -19,6 +19,11 @@ spec:
   syncPolicy:
     syncOptions:
       - CreateNamespace=true
+      # Dashboard ConfigMaps (node-exporter-full is ~683 KB) exceed the
+      # 256 KB kubectl.kubernetes.io/last-applied-configuration annotation
+      # limit when using client-side apply. Server-side apply skips that
+      # annotation entirely.
+      - ServerSideApply=true
     automated:
       prune: true
       selfHeal: true
