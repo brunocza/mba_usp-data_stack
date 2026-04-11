@@ -1,0 +1,34 @@
+version: 2
+
+models:
+  - name: yellow_tripdata_clean
+    description: "NYC Yellow Taxi — tipado, filtrado, com duration_minutes derivada."
+    columns:
+      - name: vendor_id
+        description: "ID do provedor do meter (Verifone, CMT)."
+        tests:
+          - not_null
+      - name: pickup_at
+        description: "Datetime do início da corrida."
+        tests:
+          - not_null
+      - name: dropoff_at
+        description: "Datetime do fim da corrida."
+        tests:
+          - not_null
+      - name: fare_amount
+        description: "Valor do taxímetro em USD (sempre > 0)."
+        tests:
+          - not_null
+      - name: total_amount
+        description: "Total pago pelo cliente em USD (fare + tip + surcharges)."
+        tests:
+          - not_null
+      - name: duration_minutes
+        description: "Duração da corrida em minutos (derivada de pickup_at/dropoff_at)."
+        tests:
+          - not_null
+      - name: trip_distance_miles
+        description: "Distância em milhas (filtro: entre 0 e 200)."
+        tests:
+          - not_null

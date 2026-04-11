@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: bronze_nyc_taxi
+    description: "Camada bronze — cópia 1:1 dos parquets desembarcados no MinIO pelo Airflow."
+    schema: bronze_nyc_taxi
+    tables:
+      - name: yellow_tripdata_raw
+        description: "Dump bruto do parquet yellow_tripdata_2024-01 do TLC NYC."

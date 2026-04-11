@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: daily_revenue
+    description: "Receita diária agregada — 1 linha por dia do mês."
+    columns:
+      - name: trip_date
+        description: "Data do pickup."
+        tests:
+          - not_null
+          - unique
+      - name: total_trips
+        tests:
+          - not_null
+      - name: total_revenue_usd
+        tests:
+          - not_null
+
+  - name: payment_type_breakdown
+    description: "Volume e receita por método de pagamento (credit_card, cash, etc.)."
+    columns:
+      - name: payment_method
+        description: "Descrição legível do enum payment_type do TLC."
+        tests:
+          - not_null
+          - unique
+      - name: revenue_usd
+        tests:
+          - not_null
+
+  - name: hourly_demand
+    description: "Demanda por hora do dia (0-23)."
+    columns:
+      - name: hour_of_day
+        description: "Hora do pickup (0-23)."
+        tests:
+          - not_null
+          - unique
+      - name: trips
+        tests:
+          - not_null
