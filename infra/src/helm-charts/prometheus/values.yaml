@@ -1206,8 +1206,36 @@ serverFiles:
 
 # adds additional scrape configs to prometheus.yml
 # must be a string so you have to add a | after extraScrapeConfigs:
-# example adds prometheus-blackbox-exporter scrape config
-extraScrapeConfigs: ""
+extraScrapeConfigs: |
+  - job_name: 'airflow-statsd'
+    static_configs:
+      - targets: ['airflow10-statsd.orchestrator2.svc.cluster.local:9102']
+        labels:
+          app: airflow
+          instance: airflow10
+  - job_name: 'minio-cluster'
+    metrics_path: /minio/v2/metrics/cluster
+    scheme: http
+    static_configs:
+      - targets: ['minio.deepstorage.svc.cluster.local:80']
+        labels:
+          app: minio
+          tenant: datalake
+  - job_name: 'minio-node'
+    metrics_path: /minio/v2/metrics/node
+    scheme: http
+    static_configs:
+      - targets: ['minio.deepstorage.svc.cluster.local:80']
+        labels:
+          app: minio
+          tenant: datalake
+  - job_name: 'clickhouse'
+    metrics_path: /metrics
+    scheme: http
+    static_configs:
+      - targets: ['clickhouse.warehouse.svc.cluster.local:9363']
+        labels:
+          app: clickhouse
   # - job_name: 'prometheus-blackbox-exporter'
   #   metrics_path: /probe
   #   params:

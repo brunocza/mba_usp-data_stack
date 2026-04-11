@@ -440,12 +440,15 @@ initChownData:
 
 # Administrator credentials when not using an existing secret (see below)
 adminUser: admin
-adminPassword: Phn14002@
+adminPassword: ""
 
 # Use an existing secret for the admin user.
+# Secret is created out-of-band via kubectl in ns monitorability:
+#   kubectl -n monitorability create secret generic grafana-admin \
+#     --from-literal=admin-user=admin --from-literal=admin-password=<pwd>
 admin:
   ## Name of the secret. Can be templated.
-  existingSecret: ""
+  existingSecret: "grafana-admin"
   userKey: admin-user
   passwordKey: admin-password
 
