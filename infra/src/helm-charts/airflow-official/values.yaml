@@ -1876,7 +1876,7 @@ apiServer:
     # Annotations to add to Airflow API server kubernetes service account.
     annotations: {}
   service:
-    type: ClusterIP
+    type: LoadBalancer
     ## service annotations
     annotations: {}
     ports:
