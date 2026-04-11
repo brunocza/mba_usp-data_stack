@@ -70,7 +70,7 @@ O tráfego do navegador jamais toca diretamente o cluster: ele passa pela edge d
 |---|---|---|---|
 | **Virtualização** | Proxmox VE + Terraform (`Telmate/proxmox`) | 3.0.1-rc1 | Provisiona a VM Ubuntu 22.04 a partir de um template cloud-init |
 | **Orquestração de containers** | k3s | v1.32.5+k3s1 | Distribuição leve de Kubernetes |
-| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs `192.168.18.21–58` para Services do tipo `LoadBalancer` |
+| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs de um pool reservado na rede local para Services do tipo `LoadBalancer` |
 | **GitOps** | ArgoCD | | Reconcilia continuamente o estado do cluster com este repositório |
 | **Tunnel & autenticação** | Cloudflare Tunnel + Zero Trust Access | latest | Exposição pública sem porta aberta, com OTP por email |
 | **Orquestração de workflows** | Apache Airflow | 3.1.8 (chart 1.20.0) | DAGs sincronizadas via git-sync, executor Celery + Redis |
@@ -261,7 +261,7 @@ Esta seção descreve como recriar o projeto em um ambiente limpo, começando po
 
 ### Pré-requisitos
 
-- Um host Proxmox VE com acesso administrativo e rede `192.168.18.0/24` disponível (ou equivalente ajustável em variáveis)
+- Um host Proxmox VE com acesso administrativo e uma rede privada disponível (faixa ajustável em `variables.tf`)
 - Um template cloud-init de Ubuntu 22.04 já cadastrado no Proxmox (nome usado em `vm_ubuntu_tmpl_name`)
 - Uma conta Cloudflare com um domínio ativo (zona com nameservers apontando para `*.ns.cloudflare.com`)
 - `terraform`, `kubectl` e `helm` instalados na estação de trabalho
@@ -273,21 +273,24 @@ O manifesto Terraform em `proxmox_vm_template/main.tf` cria um recurso `proxmox_
 ```bash
 cd proxmox_vm_template
 
-# Crie terraform.tfvars com suas credenciais do Proxmox
-cat > terraform.tfvars <<EOF
-pm_api_url          = "https://proxmox.sua-rede.local:8006/api2/json"
-pm_api_token_id     = "terraform@pve!token"
-pm_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-pm_host             = "pve-node-1"
-vm_ubuntu_tmpl_name = "ubuntu-2204-cloud"
+# Crie terraform.tfvars com os parâmetros do seu ambiente
+# (NÃO commitar — o .gitignore já cobre *.tfvars)
+cat > terraform.tfvars <<'EOF'
+pm_api_url          = "https://<proxmox-host>:8006/api2/json"
+pm_api_token_id     = "<token-id>"
+pm_api_token_secret = "<token-secret>"
+pm_host             = "<proxmox-node-name>"
+vm_ubuntu_tmpl_name = "<nome-do-template-cloud-init>"
 vm_cores            = 8
 vm_vcpus            = 8
 vm_sockets          = 1
 vm_cpu_type         = "host"
-vm_memory           = 32768
-vm_ip_base          = "192.168.18.20"
-vm_user             = "ubuntu"
-ssh_public_keys     = "$(cat ~/.ssh/id_rsa.pub | base64 -w0)"
+vm_memory           = 32768      # 32 GiB
+vm_disk_size        = 100        # GiB
+vm_ip_base          = "<ip-estatico-desejado>"
+vm_gateway          = "<gateway-da-rede>"
+vm_user             = "<usuario-cloudinit>"
+ssh_public_keys     = "<chave-publica-ssh-em-base64>"
 EOF
 
 terraform init
@@ -308,18 +311,21 @@ Com a VM no ar, execute o script de bootstrap dentro dela. Ele:
 5. Cria um symlink `/usr/local/bin/kubectl` → `/usr/local/bin/k3s`
 
 ```bash
-scp proxmox_vm_template/install_k3s.sh ubuntu@192.168.18.20:/tmp/
-ssh ubuntu@192.168.18.20 "sudo bash /tmp/install_k3s.sh"
+NODE_IP="<ip-da-vm-recem-criada>"
+NODE_USER="<usuario-ssh>"
+
+scp proxmox_vm_template/install_k3s.sh "$NODE_USER@$NODE_IP:/tmp/"
+ssh "$NODE_USER@$NODE_IP" "sudo bash /tmp/install_k3s.sh"
 
 # Valide
-ssh ubuntu@192.168.18.20 "kubectl get nodes -o wide"
+ssh "$NODE_USER@$NODE_IP" "kubectl get nodes -o wide"
 ```
 
 ### Etapa 3 — MetalLB & IPAddressPool (`infra/terraform/kubernetes/bare_metal_config/`)
 
 Este diretório contém o script `setup-load-balancer.sh` que instala **Kube-VIP** (cloud controller), aplica o manifest do **MetalLB v0.13.12** e configura o pool de IPs.
 
-O pool usado pelo projeto é `192.168.18.21-192.168.18.58`, declarado em `metallb-config.yaml`:
+O pool de IPs é declarado em `metallb-config.yaml`. Ajuste a faixa para refletir a sub-rede livre no seu ambiente antes de aplicar — o valor padrão do repositório aponta para uma rede privada interna e deve ser trocado em cada deployment:
 
 ```yaml
 apiVersion: metallb.io/v1beta1
@@ -329,11 +335,16 @@ metadata:
   namespace: metallb-system
 spec:
   addresses:
-    - 192.168.18.21-192.168.18.58
+    - <faixa-de-ips-livre-na-sua-lan>   # ex.: 10.0.0.100-10.0.0.150
 ---
 apiVersion: metallb.io/v1beta1
 kind: L2Advertisement
-...
+metadata:
+  name: default-l2-advertisement
+  namespace: metallb-system
+spec:
+  ipAddressPools:
+    - first-pool
 ```
 
 ```bash
@@ -393,7 +404,7 @@ kubectl -n argocd get applications   # espere todos aparecerem Synced/Healthy
 
 ### Etapa 8 — Cloudflare Zero Trust Access (opcional mas recomendado)
 
-Para cada hostname público, crie uma **Application** em `Access → Applications` → *Self-hosted*, anexe uma política que use o selector `Emails` (lista fixa) ou `Emails ending in` (ex: `@usp.br`), e habilite o provider **One-time PIN**. Qualquer tentativa de acesso passará primeiro pela tela de OTP da Cloudflare antes de atingir a aplicação de fato.
+Para cada hostname público, crie uma **Application** em `Access → Applications` → *Self-hosted*, anexe uma política que use os selectors de identidade disponíveis (lista fixa de emails, domínios permitidos, grupos SSO, etc.) e habilite o provider **One-time PIN** (ou outro IdP de sua preferência). Qualquer tentativa de acesso passará primeiro pela tela de autenticação da Cloudflare antes de atingir a aplicação de fato.
 
 Ao final, a plataforma deve estar totalmente operacional:
 
