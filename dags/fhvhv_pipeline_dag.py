@@ -80,6 +80,43 @@ def ingest_bronze_trips():
     print(f"bronze.fhvhv_trips: {rows:,} rows, {size} on disk")
 
 
+def optimize_tables():
+    """Force merge of inactive parts to reclaim disk after the dbt run.
+
+    The CTAS (`dbt run`) leaves inactive parts behind that ClickHouse only
+    GCs after `old_parts_lifetime` (default 480s). Forcing OPTIMIZE FINAL
+    immediately merges + drops them, freeing disk before the next run.
+    """
+    c = _client()
+    targets = [
+        ("bronze", "fhvhv_trips"),
+        ("silver", "fhvhv_trips_clean"),
+        ("gold",   "daily_revenue"),
+        ("gold",   "hourly_demand"),
+        ("gold",   "borough_pairs"),
+        ("gold",   "driver_economics"),
+        ("gold",   "shared_vs_solo"),
+    ]
+    for db, tbl in targets:
+        # Drop the part-lifetime to 10s so the next merge cycle GC's the
+        # backup parts left behind by dbt's CTAS swap.
+        try:
+            c.command(
+                f"ALTER TABLE {db}.{tbl} MODIFY SETTING old_parts_lifetime = 10"
+            )
+        except Exception as e:
+            print(f"  skip MODIFY SETTING on {db}.{tbl}: {e}")
+        c.command(f"OPTIMIZE TABLE {db}.{tbl} FINAL")
+        active = c.query(
+            f"""
+            SELECT formatReadableSize(sum(bytes_on_disk)), sum(rows)
+            FROM system.parts
+            WHERE database='{db}' AND table='{tbl}' AND active
+            """
+        ).result_rows[0]
+        print(f"  {db}.{tbl}: {active[0]}, {active[1]:,} rows")
+
+
 def ingest_bronze_zones():
     """Load taxi_zone_lookup.csv (~265 rows) into bronze.taxi_zones."""
     import os
@@ -163,4 +200,10 @@ with DAG(
         ),
     )
 
-    t_schemas >> [t_trips, t_zones] >> t_silver >> t_gold >> t_test
+    t_optimize = PythonOperator(
+        task_id="optimize_tables",
+        python_callable=optimize_tables,
+        trigger_rule="all_done",  # roda mesmo se algum upstream falhar
+    )
+
+    t_schemas >> [t_trips, t_zones] >> t_silver >> t_gold >> t_test >> t_optimize
