@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='pickup_at') }}
+{{ config(
+    materialized='table',
+    order_by='pickup_at',
+    settings={'allow_nullable_key': 1}
+) }}
 
 -- Silver: tipos forçados, filtros de qualidade, métricas derivadas.
 -- Mantém todas as 24 colunas originais e adiciona:

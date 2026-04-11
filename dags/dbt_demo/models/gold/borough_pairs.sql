@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='trips DESC') }}
+{{ config(
+    materialized='table',
+    order_by='(pickup_borough, dropoff_borough)',
+    settings={'allow_nullable_key': 1}
+) }}
 
 -- Top OD pairs por volume entre boroughs (Manhattan→Manhattan etc.).
 -- Usa a view enriquecida que já tem os nomes dos bairros resolvidos.

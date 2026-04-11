@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='trip_date') }}
+{{ config(
+    materialized='table',
+    order_by='trip_date',
+    settings={'allow_nullable_key': 1}
+) }}
 
 -- Receita e volume diário, agregando todas as viagens 2023.
 select

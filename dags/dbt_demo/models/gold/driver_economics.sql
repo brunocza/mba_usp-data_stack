@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='month') }}
+{{ config(
+    materialized='table',
+    order_by='month',
+    settings={'allow_nullable_key': 1}
+) }}
 
 -- Como os motoristas se saíram mês a mês:
 --   tarifa média, gorjeta média, % do total que vai pro motorista,

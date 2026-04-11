@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='(weekday, hour_of_day)') }}
+{{ config(
+    materialized='table',
+    order_by='(weekday, hour_of_day)',
+    settings={'allow_nullable_key': 1}
+) }}
 
 -- Demanda por hora-do-dia × dia-da-semana — clássico heatmap de transporte urbano.
 select

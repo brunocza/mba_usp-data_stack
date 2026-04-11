@@ -1,4 +1,8 @@
-{{ config(materialized='table', order_by='pickup_at') }}
+{{ config(
+    materialized='table',
+    order_by='pickup_at',
+    settings={'allow_nullable_key': 1}
+) }}
 
 -- Silver enriched: junta com bronze.taxi_zones pra resolver os IDs de PU/DO
 -- em (borough, zone) tanto pro pickup quanto pro dropoff. Output usado pelos
