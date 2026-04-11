@@ -490,7 +490,9 @@ extraEnv: ~
 
 # Extra envFrom 'items' that will be added to the definition of airflow containers
 # A string is expected (templated).
-extraEnvFrom: ~
+extraEnvFrom: |
+  - secretRef:
+      name: clickhouse-credentials
 # eg:
 # extraEnvFrom: |
 #   - secretRef:
