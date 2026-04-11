@@ -1,171 +1,412 @@
 # MBA USP — Data Stack on k3s
 
-Stack de dados completa rodando em um k3s single-node como projeto de TCC do MBA USP. Orquestração GitOps via ArgoCD, ingest/transform via Airflow+dbt, warehouse ClickHouse, data lake MinIO, observabilidade Prometheus+Grafana e exposição segura via Cloudflare Tunnel + Zero Trust Access.
+> Plataforma de dados completa em um cluster Kubernetes single-node, provisionada com Terraform sobre Proxmox VE, gerenciada via GitOps com ArgoCD, e desenvolvida como trabalho de conclusão do curso **MBA em Data Science & Analytics — ICMC/USP**.
 
-## Arquitetura
+Este repositório contém **toda a infraestrutura como código** do projeto: desde o provisionamento da VM base no Proxmox, passando pela instalação do k3s e MetalLB, até a implantação declarativa dos serviços de dados (Airflow, ClickHouse, MinIO, dbt, Grafana, Prometheus) e a exposição pública controlada via Cloudflare Tunnel com autenticação Zero Trust.
+
+O objetivo didático é demonstrar, de ponta a ponta, como montar uma plataforma de dados **realista, reproduzível e observável** usando ferramentas open-source e práticas modernas de *platform engineering*.
+
+---
+
+## Índice
+
+1. [Visão geral da arquitetura](#visão-geral-da-arquitetura)
+2. [Stack de tecnologias](#stack-de-tecnologias)
+3. [Aplicações expostas](#aplicações-expostas)
+4. [Layout do repositório](#layout-do-repositório)
+5. [Workflow de mudanças (git-first)](#workflow-de-mudanças-git-first)
+6. [Desenvolvimento local com dbt](#desenvolvimento-local-com-dbt)
+7. [Observabilidade](#observabilidade)
+8. [Segurança](#segurança)
+9. [Troubleshooting](#troubleshooting)
+10. [Provisionamento do zero](#provisionamento-do-zero)
+
+---
+
+## Visão geral da arquitetura
 
 ```
-         ┌─────────────────┐                              ┌────────────────┐
-Browser →│ Cloudflare Edge │→ Tunnel (cloudflared pods) →│  k3s cluster   │
-         └─────────────────┘                              └────────────────┘
-               ↑                                          │
-        Zero Trust Access (OTP)                           ├─ ArgoCD (GitOps)
-                                                          ├─ Airflow 3.1.8
-                                                          │    └─ dbt_demo (ClickHouse)
-                                                          ├─ ClickHouse (warehouse)
-                                                          ├─ MinIO (data lake + S3 API)
-                                                          ├─ Prometheus + Grafana
-                                                          └─ cloudflared
+                                  Internet
+                                     │
+                      ┌──────────────▼──────────────┐
+                      │      Cloudflare Edge        │
+                      │  (TLS + DNS + Zero Trust)   │
+                      └──────────────┬──────────────┘
+                                     │  (Tunnel outbound)
+                      ┌──────────────▼──────────────┐
+                      │    cloudflared pods (x2)    │
+                      │   namespace: cloudflared    │
+                      └──────────────┬──────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         │                           │                           │
+┌────────▼────────┐        ┌─────────▼─────────┐       ┌─────────▼─────────┐
+│    ArgoCD       │        │    Airflow 3.1    │       │    Grafana        │
+│    (GitOps)     │◀───────│ (Celery+git-sync) │──────▶│  (dashboards      │
+└────────┬────────┘        └─────────┬─────────┘       │   provisionados)  │
+         │                           │                 └─────────┬─────────┘
+         │ reconcilia                │ executa DAGs              │ consulta
+         ▼                           ▼                           ▼
+┌─────────────────┐        ┌───────────────────┐       ┌───────────────────┐
+│  helm charts    │        │     dbt_demo      │       │    Prometheus     │
+│  neste repo     │        │  (project inline) │       │  (scrape in-clu)  │
+└─────────────────┘        └─────────┬─────────┘       └───────────────────┘
+                                     │
+                         ┌───────────┼───────────┐
+                         ▼                       ▼
+                ┌────────────────┐      ┌────────────────┐
+                │   ClickHouse   │      │     MinIO      │
+                │   (warehouse)  │      │  (data lake)   │
+                └────────────────┘      └────────────────┘
 ```
 
-**Componentes:**
+O tráfego do navegador jamais toca diretamente o cluster: ele passa pela edge do Cloudflare, é autenticado via Zero Trust Access, e então desce pelo túnel até os pods do `cloudflared`. A partir daí, atinge os Services internos via DNS do Kubernetes. Isso elimina a necessidade de IP público, port-forward ou VPN — e entrega TLS automático como bônus.
 
-- **Kubernetes**: k3s v1.32 single-node, MetalLB para LoadBalancers internos (192.168.18.21–58)
-- **GitOps**: ArgoCD com `automated.selfHeal=true` — qualquer coisa no cluster é reconciliada a partir deste repo
-- **Orchestration**: Apache Airflow 3.1.8 com CeleryExecutor, git-sync lendo [dags/](dags/) deste repo
-- **Transformação**: dbt-core + dbt-clickhouse
-- **Warehouse**: ClickHouse (chart Bitnami)
-- **Data lake**: MinIO operator + tenant
-- **Observabilidade**: Prometheus (com kube-state-metrics + node-exporter) + Grafana com dashboards provisionados
-- **Exposição pública**: Cloudflare Tunnel (`k3s-tcc`) → hostnames em `*.bxdatalab.com` protegidos por Cloudflare Access
+---
 
-## Aplicações públicas
+## Stack de tecnologias
 
-| App | URL | Notas |
+| Camada | Tecnologia | Versão | Papel |
+|---|---|---|---|
+| **Virtualização** | Proxmox VE + Terraform (`Telmate/proxmox`) | 3.0.1-rc1 | Provisiona a VM Ubuntu 22.04 a partir de um template cloud-init |
+| **Orquestração de containers** | k3s | v1.32.5+k3s1 | Distribuição leve de Kubernetes |
+| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs `192.168.18.21–58` para Services do tipo `LoadBalancer` |
+| **GitOps** | ArgoCD | | Reconcilia continuamente o estado do cluster com este repositório |
+| **Tunnel & autenticação** | Cloudflare Tunnel + Zero Trust Access | latest | Exposição pública sem porta aberta, com OTP por email |
+| **Orquestração de workflows** | Apache Airflow | 3.1.8 (chart 1.20.0) | DAGs sincronizadas via git-sync, executor Celery + Redis |
+| **Transformação de dados** | dbt-core + dbt-clickhouse | ~1.8.0 | Project `dags/dbt_demo/` materializa models em ClickHouse |
+| **Warehouse** | ClickHouse (chart Bitnami) | | Armazenamento analítico colunar |
+| **Data lake** | MinIO (operator + tenant) | | Object storage compatível com S3, bucket policies nativas |
+| **Métricas** | Prometheus + node-exporter + kube-state-metrics | 25.27.0 / 2.54.1 | Coleta de métricas do cluster e das aplicações |
+| **Dashboards** | Grafana | 8.5.1 / app 11.2 | Visualização, com dashboards provisionados via ConfigMap |
+
+---
+
+## Aplicações expostas
+
+Todas servidas sob `*.bxdatalab.com` via Cloudflare Tunnel e protegidas por Zero Trust Access (exceto onde indicado):
+
+| Aplicação | URL | Protegido por Access? |
 |---|---|---|
-| Airflow | https://airflow.bxdatalab.com | DAGs via git-sync de [dags/](dags/) |
-| Grafana | https://grafana.bxdatalab.com | Dashboards provisionados em folders Cluster / Airflow / ClickHouse / MinIO |
-| ArgoCD | https://argocd.bxdatalab.com | Source of truth pra tudo no cluster |
-| MinIO Console | https://minio.bxdatalab.com | UI do data lake |
-| MinIO S3 API | https://s3.bxdatalab.com | Endpoint S3 (path-style) |
-| dbt docs | https://dbt-docs.bxdatalab.com | Docs auto-geradas pelo sidecar |
+| Airflow | `https://airflow.bxdatalab.com` | ✅ |
+| Grafana | `https://grafana.bxdatalab.com` | ✅ |
+| ArgoCD | `https://argocd.bxdatalab.com` | ✅ |
+| MinIO Console | `https://minio.bxdatalab.com` | ✅ |
+| MinIO S3 API | `https://s3.bxdatalab.com` | ❌ (requer chamadas programáticas S3/SigV4) |
+| dbt docs | `https://dbt-docs.bxdatalab.com` | ❌ (documentação pública) |
 
-Todas protegidas por Cloudflare Zero Trust Access com política `allowed-users` (email OTP). Prometheus intencionalmente **não é** exposto publicamente — só acessível de dentro do cluster.
+**Prometheus** propositalmente não é exposto à internet — é consultado somente de dentro do cluster pelo Grafana, reduzindo a superfície de ataque.
 
-Credenciais de login e detalhes de rede interna: ver `ENDERECOS-CLUSTER.md` (não commitado).
+---
 
 ## Layout do repositório
 
 ```
 .
-├── infra/src/
-│   ├── app-manifests/          # ArgoCD Application CRs (sources of truth)
-│   │   ├── deepstorage/        # minio-operator + minio-tenant
-│   │   ├── monitorability/     # grafana + prometheus
-│   │   ├── orchestrator/       # airflow
-│   │   └── warehouse/          # clickhouse
-│   ├── helm-charts/            # Helm charts vendorados (o que ArgoCD instala)
-│   │   ├── airflow-official/   # Apache Airflow chart 1.20.0
-│   │   ├── clickhouse/         # Bitnami ClickHouse
-│   │   ├── minio-{operator,tenant}/
-│   │   ├── grafana/            # Grafana chart 8.5.1 + dashboards JSON vendorados
-│   │   └── prometheus/         # Prometheus chart 25.27.0
-│   └── k8s-manifests/
-│       └── cloudflared/        # Deployment do tunnel
+├── proxmox_vm_template/        # Terraform: provisiona a VM no Proxmox
+│   ├── main.tf                 # resource proxmox_vm_qemu "K3S-TCC"
+│   ├── variables.tf            # entradas configuráveis (CPU, RAM, IP, etc.)
+│   └── install_k3s.sh          # script bootstrap do k3s dentro da VM
 │
-├── dags/                       # Airflow DAGs (lidas via git-sync)
+├── infra/
+│   ├── terraform/              # Terraform Day-2 do cluster
+│   │   └── kubernetes/
+│   │       ├── bare_metal_config/    # MetalLB + Kube-VIP + IPAddressPool
+│   │       └── pv/                    # Persistent Volumes via NFS (opcional)
+│   │
+│   └── src/
+│       ├── app-manifests/      # ArgoCD Applications (fonte da verdade)
+│       │   ├── deepstorage/    # minio-operator + minio-tenant
+│       │   ├── monitorability/ # grafana + prometheus
+│       │   ├── orchestrator/   # airflow
+│       │   └── warehouse/      # clickhouse
+│       │
+│       ├── helm-charts/        # Helm charts vendorados que o ArgoCD instala
+│       │   ├── airflow-official/   # Apache Airflow 1.20.0
+│       │   ├── clickhouse/         # Bitnami ClickHouse
+│       │   ├── minio-operator/
+│       │   ├── minio-tenant/
+│       │   ├── grafana/            # + dashboards JSON vendorados
+│       │   └── prometheus/         # + node-exporter + kube-state-metrics
+│       │
+│       └── k8s-manifests/
+│           └── cloudflared/    # Deployment do túnel Cloudflare
+│
+├── dags/                       # DAGs do Airflow (lidas via git-sync)
 │   ├── example_dag.py
-│   ├── dbt_demo_dag.py         # roda dbt_demo/ contra ClickHouse
-│   └── dbt_demo/               # projeto dbt (models, profiles, schema)
+│   ├── dbt_demo_dag.py         # pipeline que executa dbt_demo/
+│   └── dbt_demo/               # projeto dbt completo (models, profiles, schema)
 │
-├── dev/                        # [GITIGNORED] sandbox de desenvolvimento dbt
-│   ├── dbt_sandbox/            # cópia editável do dbt_demo → schema dbt_sandbox
-│   ├── activate.sh             # source isso pra ativar venv + env vars
-│   └── README.md
+├── dev/                        # [gitignored] sandbox local de desenvolvimento dbt
 │
-├── proxmox_vm_template/        # Terraform/config da VM base no Proxmox
-├── ENDERECOS-CLUSTER.md        # [GITIGNORED] credenciais + URLs internas
-├── .mcp.json                   # [GITIGNORED] config MCP (Airflow + Grafana)
 └── README.md                   # este arquivo
 ```
 
+---
+
 ## Workflow de mudanças (git-first)
 
-Todas as mudanças na infra ou nas DAGs passam por:
+O princípio fundamental da operação deste cluster é: **o estado desejado vive no Git**. Nada deve ser aplicado diretamente via `kubectl` em recursos gerenciados pelo ArgoCD — qualquer divergência é detectada e revertida automaticamente pelo `selfHeal`.
 
-1. **Edita localmente** (`infra/src/helm-charts/<app>/values.yaml` ou `dags/*.py`)
-2. **Commit + push** (`git commit` + VSCode Sync Changes, sem `git push` CLI — não há credenciais configuradas)
-3. **ArgoCD reconcilia** automaticamente (self-heal ligado em todos os apps)
-4. **Observa** via MCP do ArgoCD ou `kubectl -n argocd get applications`
+O ciclo de uma alteração típica:
 
-❌ Não faça `kubectl patch` direto em resources gerenciados pelo ArgoCD — o self-heal reverte em segundos.
+1. **Edite** o arquivo relevante (ex: `infra/src/helm-charts/grafana/values.yaml` ou `dags/dbt_demo/models/example/first_model.sql`).
+2. **Commit** localmente com uma mensagem descritiva.
+3. **Push** para o remoto via *VSCode Sync Changes* (`git push` CLI não está configurado intencionalmente — obriga passar pelo fluxo revisado).
+4. **ArgoCD** detecta a mudança na branch `main` em até 3 minutos e reconcilia o cluster. Para DAGs, o git-sync do Airflow faz o pull a cada 5 segundos.
+5. **Observe** o resultado via `kubectl -n argocd get applications` ou pelos MCP servers configurados (Airflow e Grafana).
 
-Exceções legítimas:
+**Exceções legítimas ao git-first:**
 
-- Secrets de credenciais são criados out-of-band via `kubectl create secret` (não commitados)
-- Application CRs foram aplicados manualmente via `kubectl apply` (não há app-of-apps ainda)
-- Patches emergenciais (ex.: deletar pod redis stale) — não afetam a spec do Deployment
+- **Segredos**: credenciais são criadas *out-of-band* via `kubectl create secret` para não vazar no git. O chart refere-se a elas por nome (`*SecretName`).
+- **Application CRs**: foram aplicadas manualmente com `kubectl apply` pois o padrão *app-of-apps* ainda não está implementado (próximo passo do projeto).
+- **Patches emergenciais**: deletar um pod travado é OK — isso não altera a *spec* do Deployment, então o ArgoCD não reverte.
+
+---
 
 ## Desenvolvimento local com dbt
 
-Sandbox isolado em `dev/dbt_sandbox/` (gitignored) contra o schema `dbt_sandbox` do ClickHouse — não afeta o `dbt_demo` que o Airflow popula.
+Para iterar em models dbt sem precisar passar por commit + sync a cada experimento, o repositório oferece um *sandbox* isolado em `dev/dbt_sandbox/`. Ele é ignorado pelo git e escreve no schema `dbt_sandbox` do ClickHouse — totalmente separado do `dbt_demo` que o Airflow popula em produção.
+
+### Setup (uma vez)
 
 ```bash
-# Setup uma vez
+# Python venv com dbt-core e dbt-clickhouse
 uv venv ~/.venvs/dbt-dev --python 3.12
-uv pip install --python ~/.venvs/dbt-dev/bin/python "dbt-core~=1.8.0" "dbt-clickhouse~=1.8.0"
-
-# Toda sessão
-cd /home/ubuntu/mba_usp-data_stack
-source dev/activate.sh
-cd dev/dbt_sandbox
-dbt debug    # All checks passed!
-dbt run      # cria models no schema dbt_sandbox
-dbt test
+uv pip install --python ~/.venvs/dbt-dev/bin/python \
+  "dbt-core~=1.8.0" "dbt-clickhouse~=1.8.0"
 ```
 
-Quando um model amadurece, copia pra `dags/dbt_demo/models/` e commita — o git-sync do Airflow pega em <10s.
+### Ciclo de trabalho
 
-## Monitoração
+```bash
+cd /home/ubuntu/mba_usp-data_stack
+source dev/activate.sh           # ativa venv + exporta CLICKHOUSE_* e DBT_PROFILES_DIR
+cd dev/dbt_sandbox
 
-Grafana lê do Prometheus in-cluster e expõe dashboards provisionados:
+dbt debug                        # valida conexão:  "All checks passed!"
+dbt run                          # materializa os models no schema dbt_sandbox
+dbt test                         # roda tests de not_null / unique / relationships
+```
 
-- **Cluster**: Node Exporter Full, Kubernetes Cluster Overview, Pods
-- **Airflow**: Airflow monitoring (FAB DB + statsd), Airflow cluster
-- **ClickHouse**: dashboard oficial 14192
-- **MinIO**: MinIO Cluster (13502), MinIO Bucket (19237)
+Quando um model amadurece, basta copiá-lo para `dags/dbt_demo/models/` e commitar. O git-sync do Airflow captura a mudança em segundos e a DAG `dbt_demo_dag` passa a executá-lo no próximo trigger.
 
-Targets scrapeados por Prometheus (em [infra/src/helm-charts/prometheus/values.yaml](infra/src/helm-charts/prometheus/values.yaml) → `extraScrapeConfigs`):
+---
+
+## Observabilidade
+
+O Grafana é provisionado com quatro *folders* de dashboards, cada um alimentado por uma ConfigMap separada para ficar abaixo do limite de 3 MiB do Kubernetes API:
+
+| Folder | Dashboards | Fonte |
+|---|---|---|
+| **Cluster** | Node Exporter Full, Kubernetes Cluster Overview, Kubernetes Pods | grafana.com IDs 1860, 7249, 6417 |
+| **Airflow** | Airflow monitoring, Airflow cluster dashboard | IDs 14448, 20994 |
+| **ClickHouse** | ClickHouse | ID 14192 |
+| **MinIO** | MinIO Cluster, MinIO Bucket | IDs 13502, 19237 |
+
+Os JSONs são *vendorados* em `infra/src/helm-charts/grafana/dashboards/` (não baixados em runtime) porque o campo `gnetId` do chart só é processado pelo `helm install`, e não pelo `helm template` usado pelo ArgoCD.
+
+Os *scrape targets* adicionais do Prometheus estão em `infra/src/helm-charts/prometheus/values.yaml` → `extraScrapeConfigs`:
 
 - `airflow-statsd` → `airflow10-statsd.orchestrator2:9102`
-- `clickhouse` → `clickhouse.warehouse:8001` (métricas do Bitnami chart)
-- `minio-cluster` + `minio-node` → `minio.deepstorage:80/minio/v2/metrics/*` (anonymous via `MINIO_PROMETHEUS_AUTH_TYPE=public`)
-- Cluster vem automático via kube-state-metrics + node-exporter do chart prometheus
+- `clickhouse` → `clickhouse.warehouse:8001` (métricas nativas do chart Bitnami)
+- `minio-cluster` + `minio-node` → `minio.deepstorage:80/minio/v2/metrics/*` (acesso anônimo habilitado via `MINIO_PROMETHEUS_AUTH_TYPE=public`)
+- Métricas do cluster vêm automaticamente via `kube-state-metrics` e `node-exporter` empacotados como subcharts do Prometheus.
+
+---
 
 ## Segurança
 
-- **Cloudflare Zero Trust Access** em todos os hostnames públicos — OTP por email antes de qualquer login app
-- **Bot Fight Mode** ativo na zone
-- **Prometheus** não exposto publicamente
-- **Secrets**: credenciais em K8s secrets out-of-band (nunca em git)
-  - `orchestrator2/clickhouse-credentials` — dbt profile via `env_var()`
-  - `monitorability/grafana-admin` — Grafana admin password
-  - `orchestrator2/airflow10-stable-{redis,fernet,jwt,websec,api}` — senhas fixas pra não rerolar em cada sync
-  - `cloudflared/cloudflared-token` — tunnel token
-- **.gitignore**: chaves SSH (`id_ed25519*`), `.claude/`, `.mcp.json`, `ENDERECOS-CLUSTER.md`, `dev/`
+### Exposição controlada
+
+- **Cloudflare Zero Trust Access** em todos os hostnames públicos: o usuário recebe um código OTP por email antes sequer de ver a tela de login da aplicação, o que inviabiliza ataques de *credential stuffing* e força bruta.
+- **Bot Fight Mode** ativo na zona, bloqueando automaticamente crawlers maliciosos.
+- **Prometheus** não é roteado pelo túnel — permanece acessível somente via DNS interno do cluster.
+
+### Segredos
+
+Nenhuma credencial é armazenada no git. Todos os segredos vivem em *K8s Secrets* criados fora do fluxo do ArgoCD, e os charts os referenciam por nome:
+
+| Secret | Namespace | Conteúdo |
+|---|---|---|
+| `clickhouse-credentials` | `orchestrator2` | User/password do ClickHouse consumidos pelo profile dbt via `env_var()` |
+| `grafana-admin` | `monitorability` | Credenciais do admin do Grafana |
+| `airflow10-stable-{redis,fernet,jwt,websec,api}` | `orchestrator2` | Senhas fixas do Airflow (evita rerroll em cada sync) |
+| `cloudflared-token` | `cloudflared` | Token do túnel |
+
+### Gitignore defensivo
+
+O `.gitignore` bloqueia por padrão: chaves SSH privadas (`id_ed25519*`), diretórios de tooling local (`.claude/`, `dev/`), arquivos de configuração MCP (`.mcp.json`) e documentos com credenciais em texto plano.
+
+---
 
 ## Troubleshooting
 
-Problemas recorrentes e suas soluções:
+Durante o desenvolvimento, alguns problemas recorrentes foram encontrados e documentados aqui como referência:
 
-- **Git-sync 404 em pods antigos**: existia `search com` no netplan do nó — pods criados antes do fix têm `/etc/resolv.conf` congelado. Delete o pod pra o STS recriar.
-- **Senhas regeradas a cada sync**: o chart Airflow usa `randAlphaNum` em helm templates, que não é determinístico sob `helm template` (client-side). Pinamos secrets via `*SecretName` para secrets externos estáveis.
-- **Grafana perdendo SA tokens**: sem PVC, toda reinicialização zera a sqlite. Ativamos `persistence.enabled=true`.
-- **Dashboards com `${DS_PROMETHEUS}`**: o chart não resolve essa variável em template — pinamos UID `prometheus` no datasource e pré-processamos os JSONs.
-- **ConfigMap > 3 MB ao provisionar dashboards**: Kubernetes limita objetos a 3 MiB; split em múltiplos providers (`cluster`, `airflow`, `clickhouse`, `minio`) + `ServerSideApply=true` na Application ArgoCD.
+| Sintoma | Causa | Solução |
+|---|---|---|
+| Pods antigos falham no git-sync com `Network is unreachable` | `search com` antigo no `/etc/resolv.conf` do nó polui `ndots:5`, fazendo `github.com` resolver como `github.com.com` | Corrigir netplan no nó e deletar pods antigos; StatefulSets recriam com config limpa |
+| Senhas regeradas a cada sync do ArgoCD | O chart do Airflow usa `randAlphaNum` em templates Helm, que não é determinístico sob `helm template` (client-side) | Pinar via `*SecretName` apontando para Secrets externos estáveis |
+| Grafana perde SA tokens e admin password a cada restart | Ausência de PVC faz a sqlite viver em `emptyDir` | `persistence.enabled=true` no chart |
+| Dashboards com `${DS_PROMETHEUS}` não resolvido | O template do chart não processa essa variável de input | Pinar UID `prometheus` no datasource provisionado e substituir `${DS_PROMETHEUS}` pelos JSONs via `sed` antes de vendorar |
+| ConfigMap de dashboards > 3 MiB | Kubernetes limita objetos do API server a 3 MiB | Dividir em múltiplos *providers* (`cluster`, `airflow`, `clickhouse`, `minio`) e habilitar `ServerSideApply=true` na Application do ArgoCD |
+| Celery falha com `invalid username-password pair` no Redis | Secret regerado mas pod Redis não foi reiniciado, mantendo a senha antiga em memória | Delete o pod Redis; o StatefulSet o recria lendo o Secret atual |
 
-## Requisitos para reprovisionar
+---
 
-Quem quiser reconstruir do zero num k3s próprio:
+## Provisionamento do zero
 
-1. Criar a VM (ver `proxmox_vm_template/`)
-2. Instalar k3s + MetalLB + ArgoCD (manual, não automatizado ainda — TODO: fazer um bootstrap script)
-3. `kubectl apply -f infra/src/app-manifests/**/*.yaml` pra criar as Applications
-4. Criar secrets out-of-band (lista em `ENDERECOS-CLUSTER.md` → seção "Recuperando credenciais")
-5. Criar Cloudflare Tunnel + Zero Trust Applications
-6. Configurar DNS apontando pra CF
+Esta seção descreve como recriar o projeto em um ambiente limpo, começando por um host Proxmox e terminando com a plataforma acessível publicamente. Os passos foram pensados para serem didáticos — cada etapa pode ser executada e verificada isoladamente.
 
-## Links úteis
+### Pré-requisitos
 
-- Histórico de implementação: `git log --oneline`
-- Memória persistente do Claude Code: `.claude/projects/-home-ubuntu-mba-usp-data-stack/memory/` (gitignored)
+- Um host Proxmox VE com acesso administrativo e rede `192.168.18.0/24` disponível (ou equivalente ajustável em variáveis)
+- Um template cloud-init de Ubuntu 22.04 já cadastrado no Proxmox (nome usado em `vm_ubuntu_tmpl_name`)
+- Uma conta Cloudflare com um domínio ativo (zona com nameservers apontando para `*.ns.cloudflare.com`)
+- `terraform`, `kubectl` e `helm` instalados na estação de trabalho
+
+### Etapa 1 — Provisionar a VM (`proxmox_vm_template/`)
+
+O manifesto Terraform em `proxmox_vm_template/main.tf` cria um recurso `proxmox_vm_qemu "K3S-TCC"` clonando o template cloud-init especificado. Ele aceita dimensões de CPU/RAM/disco como variáveis (`variables.tf`) e configura rede estática, chaves SSH e o usuário cloud-init.
+
+```bash
+cd proxmox_vm_template
+
+# Crie terraform.tfvars com suas credenciais do Proxmox
+cat > terraform.tfvars <<EOF
+pm_api_url          = "https://proxmox.sua-rede.local:8006/api2/json"
+pm_api_token_id     = "terraform@pve!token"
+pm_api_token_secret = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+pm_host             = "pve-node-1"
+vm_ubuntu_tmpl_name = "ubuntu-2204-cloud"
+vm_cores            = 8
+vm_vcpus            = 8
+vm_sockets          = 1
+vm_cpu_type         = "host"
+vm_memory           = 32768
+vm_ip_base          = "192.168.18.20"
+vm_user             = "ubuntu"
+ssh_public_keys     = "$(cat ~/.ssh/id_rsa.pub | base64 -w0)"
+EOF
+
+terraform init
+terraform plan
+terraform apply
+```
+
+O provisionamento também faz `remote-exec` pra instalar docker no primeiro boot (passo herdado de uma versão anterior; para k3s puro é dispensável).
+
+### Etapa 2 — Instalar o k3s (`proxmox_vm_template/install_k3s.sh`)
+
+Com a VM no ar, execute o script de bootstrap dentro dela. Ele:
+
+1. Atualiza o sistema
+2. Desabilita swap (requisito do Kubernetes)
+3. Ajusta parâmetros de rede (`net.bridge.bridge-nf-call-*`, `ip_forward`)
+4. Instala a versão estável atual do k3s com `--write-kubeconfig-mode 644`
+5. Cria um symlink `/usr/local/bin/kubectl` → `/usr/local/bin/k3s`
+
+```bash
+scp proxmox_vm_template/install_k3s.sh ubuntu@192.168.18.20:/tmp/
+ssh ubuntu@192.168.18.20 "sudo bash /tmp/install_k3s.sh"
+
+# Valide
+ssh ubuntu@192.168.18.20 "kubectl get nodes -o wide"
+```
+
+### Etapa 3 — MetalLB & IPAddressPool (`infra/terraform/kubernetes/bare_metal_config/`)
+
+Este diretório contém o script `setup-load-balancer.sh` que instala **Kube-VIP** (cloud controller), aplica o manifest do **MetalLB v0.13.12** e configura o pool de IPs.
+
+O pool usado pelo projeto é `192.168.18.21-192.168.18.58`, declarado em `metallb-config.yaml`:
+
+```yaml
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: first-pool
+  namespace: metallb-system
+spec:
+  addresses:
+    - 192.168.18.21-192.168.18.58
+---
+apiVersion: metallb.io/v1beta1
+kind: L2Advertisement
+...
+```
+
+```bash
+bash infra/terraform/kubernetes/bare_metal_config/setup-load-balancer.sh
+kubectl apply -f infra/terraform/kubernetes/bare_metal_config/metallb-config.yaml
+```
+
+### Etapa 4 — Instalar o ArgoCD
+
+```bash
+kubectl create namespace argocd
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+### Etapa 5 — Criar os Secrets out-of-band
+
+Antes de aplicar as Applications, crie as credenciais que os charts esperam referenciar por nome:
+
+```bash
+# Exemplo: ClickHouse para dbt
+kubectl create namespace orchestrator2
+kubectl -n orchestrator2 create secret generic clickhouse-credentials \
+  --from-literal=CLICKHOUSE_HOST=clickhouse.warehouse.svc.cluster.local \
+  --from-literal=CLICKHOUSE_PORT=8123 \
+  --from-literal=CLICKHOUSE_USER=admin \
+  --from-literal=CLICKHOUSE_PASSWORD='<senha forte>' \
+  --from-literal=CLICKHOUSE_SCHEMA=dbt_demo
+
+# Repita para grafana-admin, airflow10-stable-*, cloudflared-token
+```
+
+### Etapa 6 — Aplicar as Applications do ArgoCD
+
+```bash
+kubectl apply -f infra/src/app-manifests/deepstorage/
+kubectl apply -f infra/src/app-manifests/warehouse/
+kubectl apply -f infra/src/app-manifests/orchestrator/
+kubectl apply -f infra/src/app-manifests/monitorability/
+
+kubectl -n argocd get applications   # espere todos aparecerem Synced/Healthy
+```
+
+### Etapa 7 — Cloudflare Tunnel
+
+1. No painel Cloudflare Zero Trust → **Networks** → **Tunnels** → **Create a tunnel** → escolha `cloudflared`.
+2. Copie o token gerado e crie o Secret:
+   ```bash
+   kubectl create namespace cloudflared
+   kubectl -n cloudflared create secret generic cloudflared-token \
+     --from-literal=token='<TOKEN>'
+   ```
+3. Aplique o Deployment:
+   ```bash
+   kubectl apply -f infra/src/k8s-manifests/cloudflared/deployment.yaml
+   ```
+4. De volta ao painel, na aba **Published application routes**, adicione um registro por aplicação pública apontando para o Service interno correspondente (`airflow10-api-server.orchestrator2.svc.cluster.local:8080`, etc.).
+
+### Etapa 8 — Cloudflare Zero Trust Access (opcional mas recomendado)
+
+Para cada hostname público, crie uma **Application** em `Access → Applications` → *Self-hosted*, anexe uma política que use o selector `Emails` (lista fixa) ou `Emails ending in` (ex: `@usp.br`), e habilite o provider **One-time PIN**. Qualquer tentativa de acesso passará primeiro pela tela de OTP da Cloudflare antes de atingir a aplicação de fato.
+
+Ao final, a plataforma deve estar totalmente operacional:
+
+```bash
+kubectl -n argocd get applications   # tudo Synced + Healthy
+kubectl -n monitorability get pods   # grafana + prometheus Running
+kubectl -n orchestrator2 get pods    # airflow10-* todos Running
+kubectl -n deepstorage get pods      # datalake-pool-* Running
+kubectl -n cloudflared get pods      # cloudflared conectado
+```
+
+---
+
+## Licença e referências acadêmicas
+
+Este projeto é parte do trabalho de conclusão do MBA em Data Science & Analytics — ICMC/USP. As versões dos charts, dashboards e scripts foram escolhidas com base em compatibilidade e estabilidade observadas durante a implementação (abril de 2026). O histórico completo de decisões e a evolução do stack estão nos commits deste repositório (`git log --oneline`).
