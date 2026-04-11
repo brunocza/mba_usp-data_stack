@@ -1,30 +1,74 @@
-"""HVFHV (Uber/Lyft) medallion pipeline.
+"""HVFHV (Uber/Lyft) medallion pipeline — bronze nativo + dbt via Cosmos.
 
-12 monthly parquet files (~5.5 GiB compactado, ~25 GiB descompactado em
-MergeTree) com 24 colunas — request/on-scene/pickup/dropoff timestamps,
-fares decompostos, driver_pay, flags de shared ride e acessibilidade.
+Cosmos transforma cada model dbt em uma task Airflow nativa, com lineage no
+graph view, retries por model e tests como tasks separadas. Bem mais
+visibilidade do que um único `BashOperator(dbt run)`.
 
-Bronze   →  ingest 1:1 do MinIO (s3 glob) + dimensão taxi_zones
-Silver   →  trips tipados, filtrados, enriquecidos com nomes de borough
-Gold     →  agregações (daily revenue, hourly demand, borough pairs,
-             driver economics, shared vs solo)
+Pipeline:
+    create_schemas
+        → ingest_bronze_trips, ingest_bronze_zones   (PythonOperator)
+            → dbt_transform                          (Cosmos DbtTaskGroup)
+                → optimize_tables                    (PythonOperator)
 
-Credenciais via envFrom no secret orchestrator2/clickhouse-credentials.
-ClickHouse puxa direto do MinIO via s3() — Airflow worker não toca os bytes.
+Cosmos descobre automaticamente:
+    silver.fhvhv_trips_clean        (run + test)
+    silver.fhvhv_trips_enriched     (run, sem test)
+    gold.daily_revenue              (run + test)
+    gold.hourly_demand              (run + test)
+    gold.borough_pairs              (run + test)
+    gold.driver_economics           (run + test)
+    gold.shared_vs_solo             (run + test)
+e cria as dependências baseado em ref()/source().
 """
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 
 from airflow.models.dag import DAG
-from airflow.providers.standard.operators.bash import BashOperator
 from airflow.providers.standard.operators.python import PythonOperator
 
-DBT_SRC = "/opt/airflow/dags/repo/dags/dbt_demo"
-DBT_WORK = "/tmp/dbt_fhvhv"
-COPY_PROJECT = f"rm -rf {DBT_WORK} && cp -r {DBT_SRC} {DBT_WORK} && cd {DBT_WORK}"
+from cosmos import (
+    DbtTaskGroup,
+    ExecutionConfig,
+    ProfileConfig,
+    ProjectConfig,
+    RenderConfig,
+)
+from cosmos.constants import LoadMode
+
+# -----------------------------------------------------------------------------
+# Paths
+# -----------------------------------------------------------------------------
+DBT_PROJECT_PATH = Path("/opt/airflow/dags/repo/dags/dbt_demo")
+DBT_PROFILES_PATH = DBT_PROJECT_PATH / "profiles.yml"
+DBT_EXECUTABLE = "/home/airflow/.local/bin/dbt"
 
 
+# -----------------------------------------------------------------------------
+# Cosmos config
+# -----------------------------------------------------------------------------
+profile_config = ProfileConfig(
+    profile_name="dbt_demo",
+    target_name="dev",
+    profiles_yml_filepath=DBT_PROFILES_PATH,
+)
+
+execution_config = ExecutionConfig(
+    dbt_executable_path=DBT_EXECUTABLE,
+)
+
+# DBT_LS_FILE is the most reliable load mode without committing manifest.json:
+# Cosmos runs `dbt ls` ONCE at parse time and caches the result. We let it
+# auto-detect models from the project (which now only has silver/ and gold/).
+render_config = RenderConfig(
+    load_method=LoadMode.DBT_LS,
+)
+
+
+# -----------------------------------------------------------------------------
+# Helpers — ClickHouse client used by the non-dbt tasks
+# -----------------------------------------------------------------------------
 def _client():
     import os
 
@@ -42,11 +86,11 @@ def create_schemas():
     c = _client()
     for schema in ("bronze", "silver", "gold"):
         c.command(f"CREATE DATABASE IF NOT EXISTS {schema}")
-        print(f"ok: {schema}")
+        print(f"  ok: {schema}")
 
 
 def ingest_bronze_trips():
-    """Read all 12 monthly parquets via s3 glob and load into bronze.fhvhv_trips."""
+    """CTAS reading 12 monthly parquets directly from MinIO via s3 glob."""
     import os
 
     c = _client()
@@ -77,48 +121,11 @@ def ingest_bronze_trips():
         WHERE database='bronze' AND table='fhvhv_trips' AND active
         """
     ).result_rows[0][0]
-    print(f"bronze.fhvhv_trips: {rows:,} rows, {size} on disk")
-
-
-def optimize_tables():
-    """Force merge of inactive parts to reclaim disk after the dbt run.
-
-    The CTAS (`dbt run`) leaves inactive parts behind that ClickHouse only
-    GCs after `old_parts_lifetime` (default 480s). Forcing OPTIMIZE FINAL
-    immediately merges + drops them, freeing disk before the next run.
-    """
-    c = _client()
-    targets = [
-        ("bronze", "fhvhv_trips"),
-        ("silver", "fhvhv_trips_clean"),
-        ("gold",   "daily_revenue"),
-        ("gold",   "hourly_demand"),
-        ("gold",   "borough_pairs"),
-        ("gold",   "driver_economics"),
-        ("gold",   "shared_vs_solo"),
-    ]
-    for db, tbl in targets:
-        # Drop the part-lifetime to 10s so the next merge cycle GC's the
-        # backup parts left behind by dbt's CTAS swap.
-        try:
-            c.command(
-                f"ALTER TABLE {db}.{tbl} MODIFY SETTING old_parts_lifetime = 10"
-            )
-        except Exception as e:
-            print(f"  skip MODIFY SETTING on {db}.{tbl}: {e}")
-        c.command(f"OPTIMIZE TABLE {db}.{tbl} FINAL")
-        active = c.query(
-            f"""
-            SELECT formatReadableSize(sum(bytes_on_disk)), sum(rows)
-            FROM system.parts
-            WHERE database='{db}' AND table='{tbl}' AND active
-            """
-        ).result_rows[0]
-        print(f"  {db}.{tbl}: {active[0]}, {active[1]:,} rows")
+    print(f"  bronze.fhvhv_trips: {rows:,} rows, {size}")
 
 
 def ingest_bronze_zones():
-    """Load taxi_zone_lookup.csv (~265 rows) into bronze.taxi_zones."""
+    """Load taxi_zone_lookup.csv into bronze.taxi_zones."""
     import os
 
     c = _client()
@@ -147,17 +154,53 @@ def ingest_bronze_zones():
         """
     )
     rows = c.query("SELECT count() FROM bronze.taxi_zones").result_rows[0][0]
-    print(f"bronze.taxi_zones: {rows} rows")
+    print(f"  bronze.taxi_zones: {rows} rows")
 
 
+def optimize_tables():
+    """OPTIMIZE FINAL em todas as tabelas materializadas pra reciclar disco."""
+    c = _client()
+    targets = [
+        ("bronze", "fhvhv_trips"),
+        ("silver", "fhvhv_trips_clean"),
+        ("gold",   "daily_revenue"),
+        ("gold",   "hourly_demand"),
+        ("gold",   "borough_pairs"),
+        ("gold",   "driver_economics"),
+        ("gold",   "shared_vs_solo"),
+    ]
+    for db, tbl in targets:
+        try:
+            c.command(
+                f"ALTER TABLE {db}.{tbl} MODIFY SETTING old_parts_lifetime = 10"
+            )
+        except Exception as e:
+            print(f"  skip MODIFY SETTING on {db}.{tbl}: {e}")
+        try:
+            c.command(f"OPTIMIZE TABLE {db}.{tbl} FINAL")
+            active = c.query(
+                f"""
+                SELECT formatReadableSize(sum(bytes_on_disk)), sum(rows)
+                FROM system.parts
+                WHERE database='{db}' AND table='{tbl}' AND active
+                """
+            ).result_rows[0]
+            print(f"  {db}.{tbl}: {active[0]}, {active[1]:,} rows")
+        except Exception as e:
+            print(f"  skip OPTIMIZE on {db}.{tbl}: {e}")
+
+
+# -----------------------------------------------------------------------------
+# DAG
+# -----------------------------------------------------------------------------
 with DAG(
     dag_id="fhvhv_pipeline",
-    description="NYC HVFHV (Uber/Lyft) medallion pipeline — bronze/silver/gold",
+    description="NYC HVFHV (Uber/Lyft) medallion — Cosmos-native dbt DAG",
     start_date=datetime(2024, 1, 1),
     schedule=None,
     catchup=False,
     max_active_tasks=4,
-    tags=["fhvhv", "uber-lyft", "medallion", "dbt", "clickhouse"],
+    tags=["fhvhv", "uber-lyft", "medallion", "cosmos", "dbt", "clickhouse"],
 ) as dag:
 
     t_schemas = PythonOperator(
@@ -176,34 +219,18 @@ with DAG(
         python_callable=ingest_bronze_zones,
     )
 
-    t_silver = BashOperator(
-        task_id="dbt_silver",
-        bash_command=(
-            f"{COPY_PROJECT} && DBT_PROFILES_DIR={DBT_WORK} "
-            f"dbt run --select tag:silver --no-version-check"
-        ),
-    )
-
-    t_gold = BashOperator(
-        task_id="dbt_gold",
-        bash_command=(
-            f"{COPY_PROJECT} && DBT_PROFILES_DIR={DBT_WORK} "
-            f"dbt run --select tag:gold --no-version-check"
-        ),
-    )
-
-    t_test = BashOperator(
-        task_id="dbt_test",
-        bash_command=(
-            f"{COPY_PROJECT} && DBT_PROFILES_DIR={DBT_WORK} "
-            f"dbt test --select tag:silver tag:gold --no-version-check"
-        ),
+    dbt_transform = DbtTaskGroup(
+        group_id="dbt_transform",
+        project_config=ProjectConfig(DBT_PROJECT_PATH),
+        profile_config=profile_config,
+        execution_config=execution_config,
+        render_config=render_config,
     )
 
     t_optimize = PythonOperator(
         task_id="optimize_tables",
         python_callable=optimize_tables,
-        trigger_rule="all_done",  # roda mesmo se algum upstream falhar
+        trigger_rule="all_done",
     )
 
-    t_schemas >> [t_trips, t_zones] >> t_silver >> t_gold >> t_test >> t_optimize
+    t_schemas >> [t_trips, t_zones] >> dbt_transform >> t_optimize
