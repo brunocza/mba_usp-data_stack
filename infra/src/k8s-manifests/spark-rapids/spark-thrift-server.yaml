@@ -25,8 +25,10 @@ spec:
           image: bx-spark-rapids:3.5.2
           imagePullPolicy: IfNotPresent
           command:
-            - /opt/spark/sbin/start-thriftserver.sh
+            - /opt/spark/bin/spark-submit
           args:
+            - --class
+            - org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
             - --master
             - "local[*]"
             - --conf
