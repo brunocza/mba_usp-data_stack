@@ -65,10 +65,10 @@ containerLifecycleHooks: {}
 airflowHome: /opt/airflow
 
 # Default airflow repository -- overridden by all the specific images below
-defaultAirflowRepository: apache/airflow
+defaultAirflowRepository: bx-airflow
 
 # Default airflow tag to deploy
-defaultAirflowTag: "3.1.8"
+defaultAirflowTag: "3.1.8-cosmos1.14.0"
 
 # Default airflow digest. If specified, it takes precedence over tag
 defaultAirflowDigest: ~
@@ -386,15 +386,11 @@ executor: "CeleryExecutor"
 allowPodLaunching: true
 allowJobLaunching: false
 
-# Environment variables for all airflow containers
-env:
-  # Install dbt-core + dbt-clickhouse + Cosmos at pod startup. Pin
-  # apache-airflow-core==3.1.8 to prevent pip from downgrading it while
-  # resolving cosmos's transitive deps (which previously broke providers).
-  # We can't use the official constraints file because it pins
-  # protobuf==4.25.8 while dbt-core 1.8.9 needs protobuf>=5.
-  - name: _PIP_ADDITIONAL_REQUIREMENTS
-    value: "apache-airflow-core==3.1.8 dbt-core==1.10.4 dbt-clickhouse==1.9.2 astronomer-cosmos==1.14.0"
+# Environment variables for all airflow containers.
+# dbt-core, dbt-clickhouse and astronomer-cosmos are baked into the custom
+# image bx-airflow:3.1.8-cosmos1.14.0 (see Dockerfile in this dir), built
+# locally and imported into k3s containerd. No runtime pip install.
+env: []
 
 # Volumes for all airflow containers
 volumes: []
