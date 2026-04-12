@@ -116,6 +116,7 @@ def ingest_spark_bronze():
     rows = cursor.fetchone()[0]
     print(f"  fhvhv_trips_raw: {rows:,} rows")
 
+    cursor.execute("DROP VIEW IF EXISTS taxi_zones_raw")
     cursor.execute("DROP TABLE IF EXISTS taxi_zones_raw")
     cursor.execute("""
         CREATE TABLE taxi_zones_raw
