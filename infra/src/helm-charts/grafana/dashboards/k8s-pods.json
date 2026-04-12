@@ -149,7 +149,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(kube_pod_info{node=~\"$node\"}) / sum(kube_node_status_allocatable_pods{node=~\".*\"})",
+          "expr": "sum(kube_pod_info{node=~\"$node\"}) / sum(kube_node_status_allocatable{resource=\"pods\", node=~\".*\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -229,7 +229,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"}) / sum(kube_node_status_allocatable_cpu_cores{node=~\"$node\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", node=~\"$node\"}) / sum(kube_node_status_allocatable{resource=\"cpu\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -309,7 +309,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"}) / sum(kube_node_status_allocatable_memory_bytes{node=~\"$node\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", node=~\"$node\"}) / sum(kube_node_status_allocatable{resource=\"memory\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -389,7 +389,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "(sum (node_filesystem_size{nodename=~\"$node\"}) - sum (node_filesystem_free{nodename=~\"$node\"})) / sum (node_filesystem_size{nodename=~\"$node\"})",
+          "expr": "(sum (node_filesystem_size_bytes{}) - sum (node_filesystem_free_bytes{})) / sum (node_filesystem_size_bytes{})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -445,7 +445,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(kube_node_status_allocatable_pods{node=~\"$node\"})",
+          "expr": "sum(kube_node_status_allocatable{resource=\"pods\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "allocatable",
@@ -543,21 +543,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(kube_node_status_capacity_cpu_cores{node=~\"$node\"})",
+          "expr": "sum(kube_node_status_capacity{resource=\"cpu\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "allocatable",
           "refId": "A"
         },
         {
-          "expr": "sum(kube_node_status_allocatable_cpu_cores{node=~\"$node\"})",
+          "expr": "sum(kube_node_status_allocatable{resource=\"cpu\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "capacity",
           "refId": "B"
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{node=~\"$node\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "requested",
@@ -642,21 +642,21 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(kube_node_status_allocatable_memory_bytes{node=~\"$node\"})",
+          "expr": "sum(kube_node_status_allocatable{resource=\"memory\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "allocatable",
           "refId": "A"
         },
         {
-          "expr": "sum(kube_node_status_capacity_memory_bytes{node=~\"$node\"})",
+          "expr": "sum(kube_node_status_capacity{resource=\"memory\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "capacity",
           "refId": "B"
         },
         {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{node=~\"$node\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "requested",
@@ -740,14 +740,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(node_filesystem_size{nodename=~\"$node\"}) - sum(node_filesystem_free{nodename=~\"$node\"})",
+          "expr": "sum(node_filesystem_size_bytes{}) - sum(node_filesystem_free_bytes{})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "usage",
           "refId": "A"
         },
         {
-          "expr": "sum(node_filesystem_size{nodename=~\"$node\"})",
+          "expr": "sum(node_filesystem_size_bytes{})",
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "limit",
@@ -2116,7 +2116,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(delta(kube_pod_container_status_restarts{namespace=\"kube-system\"}[30m]))",
+          "expr": "sum(delta(kube_pod_container_status_restarts_total{namespace=\"kube-system\"}[30m]))",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2196,7 +2196,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(kube_pod_container_resource_requests_cpu_cores{namespace=~\"$namespace\", node=~\"$node\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"cpu\", namespace=~\"$namespace\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"
@@ -2276,7 +2276,7 @@
       "tableColumn": "",
       "targets": [
         {
-          "expr": "sum(kube_pod_container_resource_requests_memory_bytes{namespace=~\"$namespace\", node=~\"$node\"})",
+          "expr": "sum(kube_pod_container_resource_requests{resource=\"memory\", namespace=~\"$namespace\", node=~\"$node\"})",
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A"

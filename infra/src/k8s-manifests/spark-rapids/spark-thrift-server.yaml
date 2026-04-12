@@ -59,6 +59,8 @@ spec:
             - --conf
             - spark.sql.adaptive.enabled=true
             - --conf
+            - spark.sql.parquet.mergeSchema=true
+            - --conf
             - "spark.driver.memory=4g"
             - --conf
             - "spark.driver.maxResultSize=2g"
