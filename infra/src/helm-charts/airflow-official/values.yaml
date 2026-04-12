@@ -394,7 +394,7 @@ env:
   # We can't use the official constraints file because it pins
   # protobuf==4.25.8 while dbt-core 1.8.9 needs protobuf>=5.
   - name: _PIP_ADDITIONAL_REQUIREMENTS
-    value: "apache-airflow-core==3.1.8 dbt-core==1.10.4 dbt-clickhouse==1.9.2 astronomer-cosmos==1.9.2"
+    value: "apache-airflow-core==3.1.8 dbt-core==1.10.4 dbt-clickhouse==1.9.2 astronomer-cosmos==1.14.0"
 
 # Volumes for all airflow containers
 volumes: []
