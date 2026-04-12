@@ -21,7 +21,7 @@ SELECT
     do_z.Borough AS dropoff_borough,
     do_z.Zone   AS dropoff_zone
 FROM {{ ref('spark_fhvhv_trips_clean') }} t
-LEFT JOIN {{ ref('taxi_zones_raw') }} pu
+LEFT JOIN {{ source('spark_bronze', 'taxi_zones_raw') }} pu
        ON pu.LocationID = t.pickup_location_id
-LEFT JOIN {{ ref('taxi_zones_raw') }} do_z
+LEFT JOIN {{ source('spark_bronze', 'taxi_zones_raw') }} do_z
        ON do_z.LocationID = t.dropoff_location_id

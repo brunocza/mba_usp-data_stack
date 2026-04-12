@@ -1,0 +1,7 @@
+version: 2
+sources:
+  - name: spark_bronze
+    schema: default
+    tables:
+      - name: fhvhv_trips_raw
+      - name: taxi_zones_raw

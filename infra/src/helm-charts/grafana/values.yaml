@@ -521,8 +521,8 @@ envRenderSecret: {}
 ## The names of secrets in the same kubernetes namespace which contain values to be added to the environment
 ## Each entry should contain a name key, and can optionally specify whether the secret must be defined with an optional key.
 ## Name is templated.
-envFromSecrets: []
-## - name: secret-name
+envFromSecrets:
+  - name: grafana-clickhouse-credentials
 ##   prefix: prefix
 ##   optional: true
 
@@ -637,7 +637,7 @@ datasources:
         isDefault: false
         editable: true
         basicAuth: true
-        basicAuthUser: admin
+        basicAuthUser: grafana_reader
         secureJsonData:
           basicAuthPassword: $__env{CLICKHOUSE_PASSWORD}
         jsonData:

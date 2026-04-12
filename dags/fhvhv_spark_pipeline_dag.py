@@ -75,6 +75,41 @@ def create_spark_gold_schema():
     print("  ok: spark_gold schema created")
 
 
+def ingest_spark_bronze():
+    """Register parquet/csv from MinIO as Spark tables.
+
+    Spark 3.5 Thrift Server blocks direct file queries
+    (UNSUPPORTED_DATASOURCE_FOR_DIRECT_QUERY), so we register external
+    tables pointing to the S3A paths. dbt models reference these as sources.
+    """
+    spark = _spark_conn()
+    cursor = spark.cursor()
+
+    cursor.execute("DROP TABLE IF EXISTS fhvhv_trips_raw")
+    cursor.execute("""
+        CREATE TABLE fhvhv_trips_raw
+        USING parquet
+        OPTIONS (path 's3a://landing/fhvhv-2023/', mergeSchema 'true')
+    """)
+    cursor.execute("SELECT count(*) FROM fhvhv_trips_raw")
+    rows = cursor.fetchone()[0]
+    print(f"  fhvhv_trips_raw: {rows:,} rows")
+
+    cursor.execute("DROP TABLE IF EXISTS taxi_zones_raw")
+    cursor.execute("""
+        CREATE TABLE taxi_zones_raw
+        USING csv
+        OPTIONS (path 's3a://landing/fhvhv-2023/taxi_zone_lookup.csv',
+                 header 'true', inferSchema 'true')
+    """)
+    cursor.execute("SELECT count(*) FROM taxi_zones_raw")
+    zones = cursor.fetchone()[0]
+    print(f"  taxi_zones_raw: {zones} rows")
+
+    cursor.close()
+    spark.close()
+
+
 GOLD_TABLES = [
     "spark_daily_revenue",
     "spark_hourly_demand",
@@ -143,6 +178,12 @@ with DAG(
         python_callable=create_spark_gold_schema,
     )
 
+    t_bronze = PythonOperator(
+        task_id="ingest_spark_bronze",
+        python_callable=ingest_spark_bronze,
+        execution_timeout=None,
+    )
+
     dbt_spark = DbtTaskGroup(
         group_id="dbt_spark_gpu",
         project_config=ProjectConfig(DBT_PROJECT_PATH),
@@ -157,4 +198,4 @@ with DAG(
         execution_timeout=None,
     )
 
-    t_schema >> dbt_spark >> t_export
+    t_schema >> t_bronze >> dbt_spark >> t_export

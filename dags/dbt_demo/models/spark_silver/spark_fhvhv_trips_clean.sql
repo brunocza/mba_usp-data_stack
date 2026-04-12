@@ -26,7 +26,7 @@ SELECT
          THEN CAST(driver_pay / base_passenger_fare * 100 AS FLOAT)
          ELSE 0.0
     END                                                                AS driver_pct_of_fare
-FROM {{ ref('fhvhv_trips_raw') }}
+FROM {{ source('spark_bronze', 'fhvhv_trips_raw') }}
 WHERE pickup_datetime >= TIMESTAMP '2023-01-01'
   AND pickup_datetime <  TIMESTAMP '2024-01-01'
   AND base_passenger_fare > 0
