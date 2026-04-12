@@ -15,4 +15,7 @@ RUN chmod +x /opt/spark/getGpusResources.sh
 
 RUN chmod 644 /opt/spark/jars/*.jar
 
+# Pipeline script — runs as SparkApplication in cluster mode
+COPY spark_gpu_pipeline.py /opt/spark/work-dir/spark_gpu_pipeline.py
+
 USER spark

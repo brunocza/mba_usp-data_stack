@@ -11,7 +11,7 @@ spec:
     targetRevision: main
     directory:
       recurse: false
-      include: 'spark-thrift-server.yaml'
+      include: 'namespace-rbac.yaml'
   destination:
     name: in-cluster
     namespace: spark-rapids

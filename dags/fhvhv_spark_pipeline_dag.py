@@ -1,51 +1,42 @@
-"""HVFHV Spark-RAPIDS GPU pipeline — processa no GPU, persiste no ClickHouse.
+"""HVFHV Spark GPU pipeline — processa com RAPIDS na RTX 3090.
 
-Lê os parquets do MinIO via Spark Thrift Server (RAPIDS GPU), transforma
-bronze→silver→gold no GPU, e escreve as tabelas gold no ClickHouse em um
-schema dedicado `spark_gold` pra comparação side-by-side com o pipeline
-CPU (schema `gold`).
+Submete um SparkApplication (cluster mode) via Spark Operator:
+  - Driver pod: CPU, orquestra o job
+  - Executor pod: GPU (nvidia.com/gpu: 1), RAPIDS cuDF acceleration
+
+O PySpark script (spark_gpu_pipeline.py) lê parquets do MinIO,
+transforma bronze→silver→gold, e escreve os resultados como parquet
+de volta no MinIO (s3a://landing/spark-gold/).
+
+Depois, a task import_gold_to_clickhouse usa a função s3() do
+ClickHouse pra importar os parquets pro schema spark_gold —
+permitindo comparação side-by-side com o pipeline CPU (schema gold).
 
 Pipeline:
     create_spark_gold_schema
-        → run_dbt_spark            (Cosmos DbtTaskGroup, target=spark)
-            → export_to_clickhouse (PythonOperator — copia Spark→ClickHouse)
+        → submit_spark_gpu_job  (SparkApplication cluster mode + GPU)
+            → import_gold_to_clickhouse (ClickHouse s3() import)
 """
 from __future__ import annotations
 
 import time
 from datetime import datetime
-from pathlib import Path
 
 from airflow.models.dag import DAG
 from airflow.providers.standard.operators.python import PythonOperator
 
-from cosmos import (
-    DbtTaskGroup,
-    ExecutionConfig,
-    ProfileConfig,
-    ProjectConfig,
-    RenderConfig,
-)
-from cosmos.constants import LoadMode
 
-DBT_PROJECT_PATH = Path("/opt/airflow/dags/repo/dags/dbt_demo")
-DBT_PROFILES_PATH = DBT_PROJECT_PATH / "profiles.yml"
-DBT_EXECUTABLE = "/home/airflow/.local/bin/dbt"
+SPARK_APP_NAME = "fhvhv-gpu-pipeline"
+SPARK_NAMESPACE = "spark-rapids"
+SPARK_JOB_YAML = "/opt/airflow/dags/repo/infra/src/k8s-manifests/spark-rapids/spark-gpu-job.yaml"
 
-profile_config = ProfileConfig(
-    profile_name="dbt_demo",
-    target_name="spark",
-    profiles_yml_filepath=DBT_PROFILES_PATH,
-)
-
-execution_config = ExecutionConfig(
-    dbt_executable_path=DBT_EXECUTABLE,
-)
-
-render_config = RenderConfig(
-    load_method=LoadMode.DBT_LS,
-    select=["tag:spark"],
-)
+GOLD_TABLES = {
+    "daily_revenue":    "trip_date Date, total_trips UInt64, gross_revenue_usd Float64, total_driver_pay_usd Float64, total_tips_usd Float64, total_congestion_usd Float64, avg_trip_miles Float64, avg_trip_minutes Float64, avg_waiting_minutes Float64, median_fare_usd Float64, p95_fare_usd Float64",
+    "hourly_demand":    "weekday Int32, hour_of_day Int32, trips UInt64, avg_trip_min Float64, avg_wait_min Float64, avg_fare_usd Float64, avg_driver_pay_usd Float64",
+    "borough_pairs":    "pickup_borough String, dropoff_borough String, trips UInt64, revenue_usd Float64, avg_miles Float64, avg_minutes Float64, avg_fare_usd Float64",
+    "driver_economics": "month Date, total_trips UInt64, avg_base_fare Float64, avg_tips Float64, avg_driver_pay Float64, avg_driver_pct_of_fare Float64, total_driver_pay Float64, approx_hourly_rate_usd Float64",
+    "shared_vs_solo":   "ride_type String, trips UInt64, avg_total_usd Float64, avg_miles Float64, avg_minutes Float64, avg_driver_pay_usd Float64, total_revenue_usd Float64",
+}
 
 
 def _ch_client():
@@ -59,140 +50,110 @@ def _ch_client():
     )
 
 
-def _spark_conn():
-    from pyhive import hive
-    import os
-    return hive.connect(
-        host=os.environ.get("SPARK_THRIFT_HOST",
-                            "spark-thrift.spark-rapids.svc.cluster.local"),
-        port=10000,
-    )
-
-
 def create_spark_gold_schema():
     c = _ch_client()
     c.command("CREATE DATABASE IF NOT EXISTS spark_gold")
     print("  ok: spark_gold schema created")
 
 
-def ingest_spark_bronze():
-    """Register parquet/csv from MinIO as Spark tables.
+def submit_spark_gpu_job():
+    """Submit SparkApplication CRD and wait for completion."""
+    import subprocess
+    import json
 
-    Spark 3.5 Thrift Server blocks direct file queries
-    (UNSUPPORTED_DATASOURCE_FOR_DIRECT_QUERY), so we register external
-    tables pointing to the S3A paths. dbt models reference these as sources.
-    """
-    spark = _spark_conn()
-    cursor = spark.cursor()
-
-    # Create per-month external tables — Spark 3.5 can't merge
-    # INT/BIGINT parquet schemas, so we load each month separately
-    # and unify via a UNION ALL view with CAST.
-    cols = ("hvfhs_license_num, dispatching_base_num, originating_base_num,"
-            " request_datetime, on_scene_datetime, pickup_datetime, dropoff_datetime,"
-            " CAST(PULocationID AS INT) AS PULocationID,"
-            " CAST(DOLocationID AS INT) AS DOLocationID,"
-            " trip_miles, trip_time, base_passenger_fare, tolls, bcf,"
-            " sales_tax, congestion_surcharge, airport_fee, tips, driver_pay,"
-            " shared_request_flag, shared_match_flag,"
-            " access_a_ride_flag, wav_request_flag, wav_match_flag")
-    parts = []
-    for m in range(1, 13):
-        name = f"fhvhv_m{m:02d}"
-        cursor.execute(f"DROP TABLE IF EXISTS {name}")
-        cursor.execute(
-            f"CREATE TABLE {name} USING parquet "
-            f"OPTIONS (path 's3a://landing/fhvhv-2023/"
-            f"fhvhv_tripdata_2023-{m:02d}.parquet')"
-        )
-        parts.append(f"SELECT {cols} FROM {name}")
-        print(f"  {name} ok")
-
-    cursor.execute("DROP VIEW IF EXISTS fhvhv_trips_raw")
-    cursor.execute(
-        "CREATE VIEW fhvhv_trips_raw AS " + " UNION ALL ".join(parts)
+    # Cleanup any previous run
+    subprocess.run(
+        ["kubectl", "-n", SPARK_NAMESPACE, "delete", "sparkapplication",
+         SPARK_APP_NAME, "--ignore-not-found"],
+        capture_output=True, timeout=30,
     )
-    cursor.execute("SELECT count(*) FROM fhvhv_trips_raw")
-    rows = cursor.fetchone()[0]
-    print(f"  fhvhv_trips_raw: {rows:,} rows")
+    time.sleep(5)
 
-    cursor.execute("DROP VIEW IF EXISTS taxi_zones_raw")
-    cursor.execute("DROP TABLE IF EXISTS taxi_zones_raw")
-    cursor.execute("""
-        CREATE TABLE taxi_zones_raw
-        USING csv
-        OPTIONS (path 's3a://landing/fhvhv-2023/taxi_zone_lookup.csv',
-                 header 'true', inferSchema 'true')
-    """)
-    cursor.execute("SELECT count(*) FROM taxi_zones_raw")
-    zones = cursor.fetchone()[0]
-    print(f"  taxi_zones_raw: {zones} rows")
+    # Submit
+    result = subprocess.run(
+        ["kubectl", "apply", "-f", SPARK_JOB_YAML],
+        capture_output=True, text=True, timeout=30,
+    )
+    print(f"  apply: {result.stdout.strip()}")
+    if result.returncode != 0:
+        raise RuntimeError(f"kubectl apply failed: {result.stderr}")
 
-    cursor.close()
-    spark.close()
+    # Poll for completion
+    max_wait = 1800  # 30 min
+    poll_interval = 15
+    elapsed = 0
+    while elapsed < max_wait:
+        time.sleep(poll_interval)
+        elapsed += poll_interval
+
+        r = subprocess.run(
+            ["kubectl", "-n", SPARK_NAMESPACE, "get", "sparkapplication",
+             SPARK_APP_NAME, "-o", "jsonpath={.status.applicationState.state}"],
+            capture_output=True, text=True, timeout=15,
+        )
+        state = r.stdout.strip()
+        print(f"  [{elapsed}s] state={state}")
+
+        if state == "COMPLETED":
+            print("  Spark GPU job completed successfully!")
+            # Print driver logs summary
+            driver_logs = subprocess.run(
+                ["kubectl", "-n", SPARK_NAMESPACE, "logs",
+                 f"{SPARK_APP_NAME}-driver", "--tail=20"],
+                capture_output=True, text=True, timeout=30,
+            )
+            print(driver_logs.stdout)
+            return
+
+        if state in ("FAILED", "SUBMISSION_FAILED"):
+            # Get driver logs for debugging
+            driver_logs = subprocess.run(
+                ["kubectl", "-n", SPARK_NAMESPACE, "logs",
+                 f"{SPARK_APP_NAME}-driver", "--tail=50"],
+                capture_output=True, text=True, timeout=30,
+            )
+            print(driver_logs.stdout)
+            raise RuntimeError(f"Spark GPU job failed with state: {state}")
+
+    raise RuntimeError(f"Spark GPU job timed out after {max_wait}s")
 
 
-GOLD_TABLES = [
-    "spark_daily_revenue",
-    "spark_hourly_demand",
-    "spark_borough_pairs",
-    "spark_driver_economics",
-    "spark_shared_vs_solo",
-]
+def import_gold_to_clickhouse():
+    """Import Spark-generated parquets from MinIO into ClickHouse."""
+    import os
 
+    c = _ch_client()
+    endpoint = os.environ["MINIO_ENDPOINT"].rstrip("/")
+    ak = os.environ["MINIO_ACCESS_KEY"]
+    sk = os.environ["MINIO_SECRET_KEY"]
 
-def export_to_clickhouse():
-    """Read each gold table from Spark and write to ClickHouse spark_gold schema."""
-    spark = _spark_conn()
-    ch = _ch_client()
-
-    for spark_table in GOLD_TABLES:
-        ch_table = spark_table.replace("spark_", "")
+    for table, cols in GOLD_TABLES.items():
         t0 = time.time()
+        s3_url = f"{endpoint}/landing/spark-gold/{table}/*.parquet"
 
-        cursor = spark.cursor()
-        cursor.execute(f"SELECT * FROM default.{spark_table}")
-        cols = [desc[0] for desc in cursor.description]
-        rows = cursor.fetchall()
-        cursor.close()
-
-        ch.command(f"DROP TABLE IF EXISTS spark_gold.{ch_table}")
-
-        col_defs = []
-        for col in cols:
-            sample = rows[0][cols.index(col)] if rows else None
-            if isinstance(sample, (int,)):
-                col_defs.append(f"`{col}` Int64")
-            elif isinstance(sample, (float,)):
-                col_defs.append(f"`{col}` Float64")
-            elif isinstance(sample, bool):
-                col_defs.append(f"`{col}` UInt8")
-            else:
-                col_defs.append(f"`{col}` String")
-
-        ch.command(
-            f"CREATE TABLE spark_gold.{ch_table} "
-            f"({', '.join(col_defs)}) "
+        c.command(f"DROP TABLE IF EXISTS spark_gold.{table}")
+        c.command(
+            f"CREATE TABLE spark_gold.{table} ({cols}) "
             f"ENGINE = MergeTree() ORDER BY tuple()"
         )
+        c.command(
+            f"INSERT INTO spark_gold.{table} "
+            f"SELECT * FROM s3('{s3_url}', '{ak}', '{sk}', 'Parquet')"
+        )
 
-        if rows:
-            ch.insert(f"spark_gold.{ch_table}", rows, column_names=cols)
-
+        rows = c.query(f"SELECT count() FROM spark_gold.{table}").result_rows[0][0]
         elapsed = time.time() - t0
-        print(f"  spark_gold.{ch_table}: {len(rows)} rows, {elapsed:.1f}s")
-
-    spark.close()
+        print(f"  spark_gold.{table}: {rows:,} rows ({elapsed:.1f}s)")
 
 
 with DAG(
     dag_id="fhvhv_spark_pipeline",
-    description="HVFHV Spark-RAPIDS GPU pipeline — gold tables via GPU → ClickHouse",
+    description="HVFHV Spark GPU pipeline — RAPIDS on RTX 3090 → ClickHouse",
     start_date=datetime(2024, 1, 1),
     schedule=None,
     catchup=False,
-    max_active_tasks=2,
-    tags=["fhvhv", "spark", "gpu", "rapids", "medallion", "dbt"],
+    max_active_tasks=1,
+    tags=["fhvhv", "spark", "gpu", "rapids", "medallion"],
 ) as dag:
 
     t_schema = PythonOperator(
@@ -200,24 +161,16 @@ with DAG(
         python_callable=create_spark_gold_schema,
     )
 
-    t_bronze = PythonOperator(
-        task_id="ingest_spark_bronze",
-        python_callable=ingest_spark_bronze,
+    t_spark = PythonOperator(
+        task_id="submit_spark_gpu_job",
+        python_callable=submit_spark_gpu_job,
         execution_timeout=None,
     )
 
-    dbt_spark = DbtTaskGroup(
-        group_id="dbt_spark_gpu",
-        project_config=ProjectConfig(DBT_PROJECT_PATH),
-        profile_config=profile_config,
-        execution_config=execution_config,
-        render_config=render_config,
-    )
-
-    t_export = PythonOperator(
-        task_id="export_to_clickhouse",
-        python_callable=export_to_clickhouse,
+    t_import = PythonOperator(
+        task_id="import_gold_to_clickhouse",
+        python_callable=import_gold_to_clickhouse,
         execution_timeout=None,
     )
 
-    t_schema >> t_bronze >> dbt_spark >> t_export
+    t_schema >> t_spark >> t_import

@@ -13,10 +13,3 @@ dbt_demo:
       verify: false
       connect_timeout: 10
       send_receive_timeout: 300
-    spark:
-      type: spark
-      method: thrift
-      host: "{{ env_var('SPARK_THRIFT_HOST', 'spark-thrift.spark-rapids.svc.cluster.local') }}"
-      port: 10000
-      schema: default
-      threads: 1
