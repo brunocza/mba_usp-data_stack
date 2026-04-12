@@ -31,15 +31,15 @@ spec:
     spark.executor.resource.gpu.amount: "1"
     spark.task.resource.gpu.amount: "1"
   driver:
-    cores: 2
-    memory: "4g"
+    cores: 1
+    memory: "2g"
     serviceAccount: spark
     labels:
       app: spark-gpu-pipeline
   executor:
     cores: 4
     instances: 1
-    memory: "8g"
+    memory: "4g"
     gpu:
       name: "nvidia.com/gpu"
       quantity: 1
