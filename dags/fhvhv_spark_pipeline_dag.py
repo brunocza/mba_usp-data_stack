@@ -85,12 +85,33 @@ def ingest_spark_bronze():
     spark = _spark_conn()
     cursor = spark.cursor()
 
-    cursor.execute("DROP TABLE IF EXISTS fhvhv_trips_raw")
-    cursor.execute("""
-        CREATE TABLE fhvhv_trips_raw
-        USING parquet
-        OPTIONS (path 's3a://landing/fhvhv-2023/', mergeSchema 'true')
-    """)
+    # Create per-month external tables — Spark 3.5 can't merge
+    # INT/BIGINT parquet schemas, so we load each month separately
+    # and unify via a UNION ALL view with CAST.
+    cols = ("hvfhs_license_num, dispatching_base_num, originating_base_num,"
+            " request_datetime, on_scene_datetime, pickup_datetime, dropoff_datetime,"
+            " CAST(PULocationID AS INT) AS PULocationID,"
+            " CAST(DOLocationID AS INT) AS DOLocationID,"
+            " trip_miles, trip_time, base_passenger_fare, tolls, bcf,"
+            " sales_tax, congestion_surcharge, airport_fee, tips, driver_pay,"
+            " shared_request_flag, shared_match_flag,"
+            " access_a_ride_flag, wav_request_flag, wav_match_flag")
+    parts = []
+    for m in range(1, 13):
+        name = f"fhvhv_m{m:02d}"
+        cursor.execute(f"DROP TABLE IF EXISTS {name}")
+        cursor.execute(
+            f"CREATE TABLE {name} USING parquet "
+            f"OPTIONS (path 's3a://landing/fhvhv-2023/"
+            f"fhvhv_tripdata_2023-{m:02d}.parquet')"
+        )
+        parts.append(f"SELECT {cols} FROM {name}")
+        print(f"  {name} ok")
+
+    cursor.execute("DROP VIEW IF EXISTS fhvhv_trips_raw")
+    cursor.execute(
+        "CREATE VIEW fhvhv_trips_raw AS " + " UNION ALL ".join(parts)
+    )
     cursor.execute("SELECT count(*) FROM fhvhv_trips_raw")
     rows = cursor.fetchone()[0]
     print(f"  fhvhv_trips_raw: {rows:,} rows")
