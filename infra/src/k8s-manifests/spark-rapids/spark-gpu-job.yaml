@@ -37,9 +37,9 @@ spec:
     labels:
       app: spark-gpu-pipeline
   executor:
-    cores: 4
+    cores: 2
     instances: 1
-    memory: "4g"
+    memory: "2g"
     gpu:
       name: "nvidia.com/gpu"
       quantity: 1
