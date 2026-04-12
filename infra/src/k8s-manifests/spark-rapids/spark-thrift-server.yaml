@@ -37,9 +37,7 @@ spec:
             - --conf
             - spark.rapids.sql.enabled=true
             - --conf
-            - spark.rapids.sql.explain=ALL
-            - --conf
-            - "spark.rapids.sql.incompatibleOps.enabled=true"
+            - spark.rapids.sql.explain=NOT_ON_GPU
             - --conf
             - spark.executor.resource.gpu.amount=1
             - --conf

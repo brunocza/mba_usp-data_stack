@@ -63,6 +63,7 @@ execution_config = ExecutionConfig(
 # auto-detect models from the project (which now only has silver/ and gold/).
 render_config = RenderConfig(
     load_method=LoadMode.DBT_LS,
+    select=["tag:silver", "tag:gold"],
 )
 
 
