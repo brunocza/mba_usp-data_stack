@@ -90,30 +90,56 @@ def create_schemas():
 
 
 def ingest_bronze_trips():
-    """CTAS reading 12 monthly parquets directly from MinIO via s3 glob."""
+    """Ingest 12 monthly parquets into bronze.fhvhv_trips, one month at a time.
+
+    Doing all 12 files in a single CTAS via the s3() glob blew the 7.2 GiB
+    memory limit on ClickHouse (DB::Exception 241). Looping per-month keeps
+    each batch under ~600 MB and lets the inserts checkpoint to disk.
+    """
     import os
 
     c = _client()
     endpoint = os.environ["MINIO_ENDPOINT"].rstrip("/")
     ak = os.environ["MINIO_ACCESS_KEY"]
     sk = os.environ["MINIO_SECRET_KEY"]
-    s3_url = f"{endpoint}/landing/fhvhv-2023/fhvhv_tripdata_2023-*.parquet"
 
     c.command("DROP TABLE IF EXISTS bronze.fhvhv_trips")
+
+    # Build the empty table from the schema of the first parquet so column
+    # types match exactly what s3() returns. CREATE ... EMPTY AS SELECT skips
+    # the data scan but keeps the inferred schema.
+    first_url = f"{endpoint}/landing/fhvhv-2023/fhvhv_tripdata_2023-01.parquet"
     c.command(
         f"""
         CREATE TABLE bronze.fhvhv_trips
         ENGINE = MergeTree()
         ORDER BY tuple()
         SETTINGS allow_nullable_key = 1
-        AS SELECT * FROM s3(
-            '{s3_url}',
-            '{ak}', '{sk}',
-            'Parquet'
-        )
+        EMPTY AS SELECT * FROM s3('{first_url}', '{ak}', '{sk}', 'Parquet')
         """
     )
-    rows = c.query("SELECT count() FROM bronze.fhvhv_trips").result_rows[0][0]
+
+    total_rows = 0
+    for month in range(1, 13):
+        url = f"{endpoint}/landing/fhvhv-2023/fhvhv_tripdata_2023-{month:02d}.parquet"
+        c.command(
+            f"""
+            INSERT INTO bronze.fhvhv_trips
+            SELECT * FROM s3('{url}', '{ak}', '{sk}', 'Parquet')
+            SETTINGS max_threads = 2,
+                     max_insert_threads = 2,
+                     max_insert_block_size = 524288,
+                     min_insert_block_size_rows = 524288,
+                     input_format_parquet_max_block_size = 65536
+            """
+        )
+        rows = c.query(
+            "SELECT count() FROM bronze.fhvhv_trips"
+        ).result_rows[0][0]
+        added = rows - total_rows
+        total_rows = rows
+        print(f"  2023-{month:02d}: +{added:,} rows (total {rows:,})")
+
     size = c.query(
         """
         SELECT formatReadableSize(sum(bytes_on_disk))
@@ -121,7 +147,7 @@ def ingest_bronze_trips():
         WHERE database='bronze' AND table='fhvhv_trips' AND active
         """
     ).result_rows[0][0]
-    print(f"  bronze.fhvhv_trips: {rows:,} rows, {size}")
+    print(f"  bronze.fhvhv_trips final: {total_rows:,} rows, {size}")
 
 
 def ingest_bronze_zones():
