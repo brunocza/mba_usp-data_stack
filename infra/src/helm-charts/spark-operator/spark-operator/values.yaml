@@ -439,7 +439,7 @@ spark:
   # Namespaces specified here will be watched in addition to those matching jobNamespaceSelector.
   # Make sure the namespaces have already existed.
   jobNamespaces:
-  - default
+  - spark-rapids
 
   # -- Label selector to filter namespaces to watch.
   # Supports standard Kubernetes label selector syntax (e.g., 'spark-operator=enabled,env in (prod,staging)').
