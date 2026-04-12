@@ -6,9 +6,9 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'git@github.com:brunocza/Data-Stack-K8s.git'
+    repoURL: 'https://github.com/brunocza/mba_usp-data_stack.git'
     path: infra/src/helm-charts/trino
-    targetRevision: HEAD
+    targetRevision: main
     helm:
       valueFiles:
         - values.yaml
