@@ -20,6 +20,7 @@ spec:
       labels:
         app: spark-thrift-server
     spec:
+      runtimeClassName: nvidia
       containers:
         - name: spark-thrift
           image: bx-spark-rapids:3.5.2
