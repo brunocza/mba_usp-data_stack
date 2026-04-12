@@ -1944,7 +1944,7 @@ apiServer:
   # Launch additional containers into the Airflow API server pods.
   extraContainers:
     - name: dbt-docs
-      image: apache/airflow:3.1.8
+      image: bx-airflow:3.1.8-cosmos1.14.0
       imagePullPolicy: IfNotPresent
       ports:
         - name: dbt-docs
@@ -1956,7 +1956,6 @@ apiServer:
       args:
         - |
           set -eu
-          pip install --user --quiet "dbt-core~=1.8.0" "dbt-clickhouse~=1.8.0"
           export PATH="$HOME/.local/bin:$PATH"
           rm -rf /tmp/repo
           git clone --depth 1 https://github.com/brunocza/mba_usp-data_stack.git /tmp/repo
