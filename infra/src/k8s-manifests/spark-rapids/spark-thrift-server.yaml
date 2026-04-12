@@ -22,75 +22,88 @@ subjects:
     name: spark
     namespace: spark-rapids
 ---
-# Spark Thrift Server as a long-running SparkApplication
-# Driver pod: CPU only (handles JDBC connections)
-# Executor pod: GPU (RAPIDS cuDF acceleration)
-apiVersion: sparkoperator.k8s.io/v1beta2
-kind: SparkApplication
+# Spark Thrift Server — client mode, CPU only.
+# GPU acceleration happens via batch SparkApplication jobs (cluster mode)
+# dispatched by Airflow for each dbt model, where the executor pod gets
+# the GPU. The Thrift Server is a long-running JDBC endpoint for Metabase
+# and interactive queries.
+apiVersion: apps/v1
+kind: Deployment
 metadata:
-  name: spark-thrift-gpu
+  name: spark-thrift-server
   namespace: spark-rapids
+  labels:
+    app: spark-thrift-server
 spec:
-  type: Scala
-  mode: cluster
-  image: bx-spark-rapids:3.5.2
-  imagePullPolicy: IfNotPresent
-  mainClass: org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
-  mainApplicationFile: local:///opt/spark/jars/spark-hive-thriftserver_2.12-3.5.2.jar
-  sparkVersion: "3.5.2"
-  restartPolicy:
-    type: Always
-    onSubmissionFailureRetries: 3
-    onFailureRetries: 3
-    onSubmissionFailureRetryInterval: 10
-    onFailureRetryInterval: 10
-  sparkConf:
-    # RAPIDS GPU acceleration
-    spark.plugins: "com.nvidia.spark.SQLPlugin"
-    spark.rapids.sql.enabled: "true"
-    spark.rapids.sql.explain: "NOT_ON_GPU"
-    spark.rapids.sql.concurrentGpuTasks: "2"
-    # S3A / MinIO
-    spark.hadoop.fs.s3a.endpoint: "http://minio.deepstorage.svc.cluster.local:80"
-    spark.hadoop.fs.s3a.access.key: "data-lake"
-    spark.hadoop.fs.s3a.secret.key: "12620ee6-2162-11ee-be56-0242ac120002"
-    spark.hadoop.fs.s3a.path.style.access: "true"
-    spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
-    spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
-    # Thrift Server
-    spark.hive.server2.thrift.port: "10000"
-    spark.hive.server2.thrift.bind.host: "0.0.0.0"
-    spark.sql.warehouse.dir: "file:///tmp/spark-warehouse"
-    spark.sql.adaptive.enabled: "true"
-  driver:
-    cores: 2
-    memory: "2g"
-    serviceAccount: spark
-    labels:
+  replicas: 1
+  selector:
+    matchLabels:
       app: spark-thrift-server
-      component: driver
-    ports:
-      - name: thrift
-        containerPort: 10000
-        protocol: TCP
-      - name: spark-ui
-        containerPort: 4040
-        protocol: TCP
-  executor:
-    cores: 2
-    instances: 1
-    memory: "4g"
-    gpu:
-      name: "nvidia.com/gpu"
-      quantity: 1
-    labels:
-      app: spark-thrift-server
-      component: executor
-    env:
-      - name: NVIDIA_VISIBLE_DEVICES
-        value: "all"
-      - name: NVIDIA_DRIVER_CAPABILITIES
-        value: "compute,utility"
+  template:
+    metadata:
+      labels:
+        app: spark-thrift-server
+    spec:
+      serviceAccountName: spark
+      containers:
+        - name: spark-thrift
+          image: bx-spark-rapids:3.5.2
+          imagePullPolicy: IfNotPresent
+          command:
+            - /opt/spark/bin/spark-submit
+          args:
+            - --class
+            - org.apache.spark.sql.hive.thriftserver.HiveThriftServer2
+            - --master
+            - "local[*]"
+            - --conf
+            - spark.sql.adaptive.enabled=true
+            - --conf
+            - "spark.driver.memory=4g"
+            - --conf
+            - "spark.driver.maxResultSize=2g"
+            # S3A / MinIO config
+            - --conf
+            - spark.hadoop.fs.s3a.endpoint=http://minio.deepstorage.svc.cluster.local:80
+            - --conf
+            - spark.hadoop.fs.s3a.access.key=data-lake
+            - --conf
+            - spark.hadoop.fs.s3a.secret.key=12620ee6-2162-11ee-be56-0242ac120002
+            - --conf
+            - spark.hadoop.fs.s3a.path.style.access=true
+            - --conf
+            - spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem
+            - --conf
+            - spark.hadoop.fs.s3a.connection.ssl.enabled=false
+            # Hive metastore
+            - --conf
+            - spark.sql.warehouse.dir=file:///tmp/spark-warehouse
+            - --conf
+            - spark.hive.server2.thrift.port=10000
+            - --conf
+            - spark.hive.server2.thrift.bind.host=0.0.0.0
+          ports:
+            - name: thrift
+              containerPort: 10000
+            - name: spark-ui
+              containerPort: 4040
+          resources:
+            requests:
+              cpu: "1"
+              memory: 4Gi
+            limits:
+              cpu: "4"
+              memory: 8Gi
+          readinessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 60
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 10000
+            initialDelaySeconds: 120
+            periodSeconds: 30
 ---
 apiVersion: v1
 kind: Service
@@ -101,7 +114,6 @@ spec:
   type: LoadBalancer
   selector:
     app: spark-thrift-server
-    component: driver
   ports:
     - name: thrift
       port: 10000
