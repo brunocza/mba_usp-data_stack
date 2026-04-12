@@ -9,6 +9,8 @@ spec:
   image: bx-spark-rapids:3.5.2
   imagePullPolicy: IfNotPresent
   mainApplicationFile: local:///opt/spark/work-dir/spark_gpu_pipeline.py
+  arguments:
+    - "3"
   sparkVersion: "3.5.2"
   restartPolicy:
     type: Never
@@ -17,7 +19,9 @@ spec:
     spark.plugins: "com.nvidia.spark.SQLPlugin"
     spark.rapids.sql.enabled: "true"
     spark.rapids.sql.explain: "NOT_ON_GPU"
-    spark.rapids.sql.concurrentGpuTasks: "2"
+    spark.rapids.sql.concurrentGpuTasks: "1"
+    spark.sql.shuffle.partitions: "8"
+    spark.executor.memoryOverheadFactor: "0.2"
     # S3A / MinIO
     spark.hadoop.fs.s3a.endpoint: "http://minio.deepstorage.svc.cluster.local:80"
     spark.hadoop.fs.s3a.access.key: "data-lake"
