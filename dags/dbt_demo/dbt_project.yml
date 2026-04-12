@@ -25,3 +25,12 @@ models:
       +materialized: table
       +schema: gold
       +tags: ["gold"]
+    spark_bronze:
+      +materialized: table
+      +tags: ["spark"]
+    spark_silver:
+      +materialized: table
+      +tags: ["spark"]
+    spark_gold:
+      +materialized: table
+      +tags: ["spark"]

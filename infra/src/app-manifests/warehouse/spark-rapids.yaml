@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: spark-rapids
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: 'https://github.com/brunocza/mba_usp-data_stack.git'
+    path: infra/src/k8s-manifests/spark-rapids
+    targetRevision: main
+    directory:
+      recurse: false
+      include: 'spark-thrift-server.yaml'
+  destination:
+    name: in-cluster
+    namespace: spark-rapids
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=true
+    automated:
+      prune: true
+      selfHeal: true
