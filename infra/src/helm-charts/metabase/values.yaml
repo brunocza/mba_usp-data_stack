@@ -61,12 +61,7 @@ jetty:
 
 # Backend database
 database:
-  type: postgres
-  host: 192.168.18.81
-  port: 5432
-  dbname: comporte
-  username: comporte
-  password: 1400
+  type: h2
   # Database type (h2 / mysql / postgres), default: h2
   # type: h2
   ## Specify file to store H2 database.  You will also have to back this with a volume (cf. extraVolume and extraVolumeMounts)!
@@ -116,11 +111,10 @@ password:
   complexity: normal
   length: 6
 
-timeZone: UTC
+timeZone: America/Sao_Paulo
 emojiLogging: true
 colorLogging: true
-# javaOpts:
-# pluginsDirectory: /plugins
+javaOpts: "-Xmx1536m -Xms512m"
 # siteUrl:
 
 session:
@@ -129,30 +123,11 @@ session:
   # sessionCookies:
   # cookieSameSite:
 
-# specify init containers, e.g. for module download
 extraInitContainers: []
-#  - name: download-modules
-#    image: "curlimages/curl:7.70.0"
-#    imagePullPolicy: "IfNotPresent"
-#    volumeMounts:
-#      - name: plugins
-#        mountPath: /plugins
-#    workingDir: /plugins
-#    command:
-#      - "/bin/sh"
-#      - "-ec"
-#      - |
-#        curl -Lso /plugins/athena.metabase-driver.jar \
-#                  https://github.com/dacort/metabase-athena-driver/releases/download/v1.1.0/athena.metabase-driver.jar
 
 extraVolumeMounts: []
-#  - name: plugins
-#    mountPath: /plugins
-#    readOnly: false
 
 extraVolumes: []
-#  - name: plugins
-#    emptyDir: {}
 
 livenessProbe:
   path: /api/health
@@ -256,17 +231,12 @@ serviceAccount:
   automountServiceAccountToken: false
 
 resources:
-  {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #  cpu: 100m
-  #  memory: 128Mi
-  # requests:
-  #  cpu: 100m
-  #  memory: 128Mi
+  requests:
+    cpu: 250m
+    memory: 1Gi
+  limits:
+    cpu: "1"
+    memory: 2Gi
 
 # You can also opt out of automounting API credentials for a particular Pod;
 # https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting
