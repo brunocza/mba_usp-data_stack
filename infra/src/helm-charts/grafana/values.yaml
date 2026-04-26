@@ -814,8 +814,6 @@ dashboards:
     k8s-pods:
       file: dashboards/k8s-pods.json
   airflow:
-    airflow-monitoring:
-      file: dashboards/airflow-monitoring.json
     airflow-cluster:
       file: dashboards/airflow-cluster.json
   clickhouse:
