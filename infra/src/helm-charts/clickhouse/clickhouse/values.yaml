@@ -667,7 +667,7 @@ service:
   ## @param service.loadBalancerIP ClickHouse service Load Balancer IP (only if per-replica access is disabled)
   ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-loadbalancer
   ##
-  loadBalancerIP: ""
+  loadBalancerIP: "192.168.18.21"
   ## @param service.loadBalancerIPs Array of ClickHouse service Load Balancer IPs (only if per-replica access is enabled). Length must be the same as shards multiplied by replicaCount
   ## e.g:
   ## loadBalancerIPs:

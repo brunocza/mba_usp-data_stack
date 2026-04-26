@@ -164,7 +164,11 @@ tenant:
     quiet: true
   ## serviceMetadata allows passing additional labels and annotations to MinIO and Console specific
   ## services created by the operator.
-  serviceMetadata: { }
+  serviceMetadata:
+    minioServiceAnnotations:
+      metallb.universe.tf/loadBalancerIPs: "192.168.18.24"
+    consoleServiceAnnotations:
+      metallb.universe.tf/loadBalancerIPs: "192.168.18.22"
   ## Add environment variables to be set in MinIO container (https://github.com/minio/minio/tree/master/docs/config)
   env:
     - name: MINIO_STORAGE_CLASS_STANDARD

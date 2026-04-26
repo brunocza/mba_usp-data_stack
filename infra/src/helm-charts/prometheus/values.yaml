@@ -716,7 +716,7 @@ server:
     ##
     externalIPs: []
 
-    loadBalancerIP: ""
+    loadBalancerIP: "192.168.18.27"
     loadBalancerSourceRanges: []
     servicePort: 80
     sessionAffinity: None

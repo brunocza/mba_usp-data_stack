@@ -252,6 +252,8 @@ shareProcessNamespace:
 service:
   type: LoadBalancer
   port: 8080
+  annotations:
+    metallb.universe.tf/loadBalancerIPs: "192.168.18.30"
 
 auth:
   # passwordAuthSecret: "trino-password-file"

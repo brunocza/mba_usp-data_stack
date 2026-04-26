@@ -482,8 +482,8 @@ extraConfigMaps: {}
 # a string is expected (templated).
 # TODO: difference from `env`? This is a templated string. Probably should template `env` and remove this.
 extraEnv: |
-  - name: AIRFLOW__COSMOS__DBT_DOCS_DIR
-    value: "/dbt-docs/target"
+  - name: AIRFLOW__COSMOS__DBT_DOCS_PROJECTS
+    value: '{"fhvhv":{"dir":"/dbt-docs/target","name":"dbt docs"}}'
 # eg:
 # extraEnv: |
 #   - name: AIRFLOW__CORE__LOAD_EXAMPLES
@@ -1909,7 +1909,7 @@ apiServer:
         port: 8081
         targetPort: 8081
 
-    loadBalancerIP: ~
+    loadBalancerIP: 192.168.18.31
     ## Limit load balancer source ips to list of CIDRs
     # loadBalancerSourceRanges:
     #   - "10.123.0.0/16"

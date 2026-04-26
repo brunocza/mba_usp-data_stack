@@ -229,7 +229,7 @@ service:
   ipFamilyPolicy: ""
   # Sets the families that should be supported and the order in which they should be applied to ClusterIP as well. Can be IPv4 and/or IPv6.
   ipFamilies: []
-  loadBalancerIP: ""
+  loadBalancerIP: "192.168.18.23"
   loadBalancerClass: ""
   loadBalancerSourceRanges: []
   port: 80
