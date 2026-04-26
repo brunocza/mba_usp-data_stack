@@ -224,7 +224,7 @@ with DAG(
     dag_id="fhvhv_pipeline",
     description="NYC HVFHV (Uber/Lyft) medallion — Cosmos-native dbt DAG",
     start_date=datetime(2024, 1, 1),
-    schedule=None,
+    schedule="@hourly",
     catchup=False,
     max_active_tasks=4,
     tags=["fhvhv", "uber-lyft", "medallion", "cosmos", "dbt", "clickhouse"],

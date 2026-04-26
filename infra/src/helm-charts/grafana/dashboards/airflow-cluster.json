@@ -139,7 +139,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_scheduler_heartbeat{container=\"statsd\"}",
+          "expr": "airflow_scheduler_heartbeat",
           "interval": "",
           "legendFormat": "__auto",
           "range": true,
@@ -269,7 +269,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "af_agg_dag_processing_total_parse_time{}",
+          "expr": "airflow_dag_processing_total_parse_time",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -395,7 +395,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_ti_failures{airflow_id=~\"$airflow_id\", cluster=\"$cluster\"}",
+          "expr": "airflow_ti_failures",
           "interval": "",
           "legendFormat": "",
           "range": true,
@@ -656,7 +656,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_ti_finish_test_bash_operator_bash_task_upstream_failed{}",
+          "expr": "rate(airflow_operator_failures[5m]) * 60",
           "interval": "",
           "legendFormat": "{{operator_name}}",
           "range": true,
@@ -717,7 +717,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "af_agg_executor_queued_tasks{airflow_id=~\"$airflow_id\", cluster=\"$cluster\"}",
+          "expr": "airflow_executor_queued_tasks",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -964,7 +964,7 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "af_agg_executor_running_tasks{airflow_id=~\"$airflow_id\", cluster=\"$cluster\"}",
+          "expr": "airflow_executor_running_tasks",
           "interval": "",
           "legendFormat": "",
           "refId": "A"
@@ -1061,14 +1061,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "rate(airflow_job_end{}[1m]) * 60",
+          "expr": "rate(airflow_ti_successes[5m]) * 60",
           "interval": "",
           "legendFormat": "{{job_name}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Jobs ended per minute",
+      "title": "Tasks finished per minute",
       "type": "timeseries"
     },
     {
@@ -1185,7 +1185,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_dagrun_duration_success{}",
+          "expr": "airflow_dagrun_duration_success{quantile=\"0.5\"}",
           "format": "time_series",
           "interval": "",
           "legendFormat": "{{dag_id}} p{{quantile}}",
@@ -1285,7 +1285,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_dagrun_duration{}",
+          "expr": "airflow_dagrun_duration{quantile=\"0.5\"}",
           "format": "time_series",
           "instant": false,
           "interval": "",
@@ -1385,14 +1385,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_dagrun_dependency_check_test_bash_operator{}",
+          "expr": "airflow_dagrun_dependency_check{quantile=\"0.5\"}",
           "interval": "",
           "legendFormat": "{{dag_id}} p{{quantile}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "DAG run bash operator dependency check time",
+      "title": "DAG run dependency check time (p50)",
       "type": "timeseries"
     },
     {
@@ -1484,14 +1484,14 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "airflow_dagrun_schedule_delay{} * 1000",
+          "expr": "airflow_dagrun_first_task_scheduling_delay{quantile=\"0.5\"} * 1000",
           "interval": "",
           "legendFormat": "{{dag_id}} p{{quantile}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "DAG run schedule delay",
+      "title": "First task scheduling delay (ms, p50)",
       "type": "timeseries"
     }
   ],
