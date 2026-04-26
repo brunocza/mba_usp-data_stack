@@ -226,6 +226,7 @@ with DAG(
     start_date=datetime(2024, 1, 1),
     schedule="@hourly",
     catchup=False,
+    max_active_runs=1,
     max_active_tasks=4,
     tags=["fhvhv", "uber-lyft", "medallion", "cosmos", "dbt", "clickhouse"],
 ) as dag:

@@ -481,7 +481,9 @@ extraConfigMaps: {}
 # Extra env 'items' that will be added to the definition of airflow containers
 # a string is expected (templated).
 # TODO: difference from `env`? This is a templated string. Probably should template `env` and remove this.
-extraEnv: ~
+extraEnv: |
+  - name: AIRFLOW__COSMOS__DBT_DOCS_DIR
+    value: "/dbt-docs/target"
 # eg:
 # extraEnv: |
 #   - name: AIRFLOW__CORE__LOAD_EXAMPLES
@@ -1952,6 +1954,9 @@ apiServer:
       envFrom:
         - secretRef:
             name: clickhouse-credentials
+      volumeMounts:
+        - name: dbt-docs-shared
+          mountPath: /dbt-docs
       command: ["bash", "-c"]
       args:
         - |
@@ -1961,15 +1966,16 @@ apiServer:
           git clone --depth 1 https://github.com/brunocza/mba_usp-data_stack.git /tmp/repo
           cd /tmp/repo/dags/dbt_demo
           export DBT_PROFILES_DIR=.
-          mkdir -p target
+          export DBT_TARGET_PATH=/dbt-docs/target
+          mkdir -p "$DBT_TARGET_PATH"
           dbt docs generate --no-version-check || echo "(initial dbt docs generate failed; will retry in loop)"
-          cd target
+          cd /dbt-docs/target
           python3 -m http.server 8081 --bind 0.0.0.0 &
           SERVER_PID=$!
           while true; do
             sleep 600
             (cd /tmp/repo && git pull --ff-only) || true
-            (cd /tmp/repo/dags/dbt_demo && DBT_PROFILES_DIR=. dbt docs generate --no-version-check) || true
+            (cd /tmp/repo/dags/dbt_demo && DBT_PROFILES_DIR=. DBT_TARGET_PATH=/dbt-docs/target dbt docs generate --no-version-check) || true
           done
           wait $SERVER_PID
       readinessProbe:
@@ -1994,8 +2000,13 @@ apiServer:
   #     - name: my-templated-extra-volume
   #       mountPath: "{{ .Values.my_custom_path }}"
   #       readOnly: true
-  extraVolumes: []
-  extraVolumeMounts: []
+  extraVolumes:
+    - name: dbt-docs-shared
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: dbt-docs-shared
+      mountPath: /dbt-docs
+      readOnly: true
 
   # Select certain nodes for Airflow API server pods.
   nodeSelector: {}
