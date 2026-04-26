@@ -1,0 +1,16 @@
+{{- if and (eq .Values.database.type "h2") .Values.extraVolumes }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: metabase-h2
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "metabase.name" . }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+{{- end }}

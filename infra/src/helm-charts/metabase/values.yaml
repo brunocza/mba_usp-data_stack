@@ -125,9 +125,14 @@ session:
 
 extraInitContainers: []
 
-extraVolumeMounts: []
+extraVolumeMounts:
+  - name: h2-data
+    mountPath: /metabase.db
 
-extraVolumes: []
+extraVolumes:
+  - name: h2-data
+    persistentVolumeClaim:
+      claimName: metabase-h2
 
 livenessProbe:
   path: /api/health
