@@ -3894,14 +3894,14 @@ logs:
   #   medium: Memory
 
   persistence:
-    # Enable persistent volume for storing logs
-    enabled: false
+    # Enable persistent volume for storing logs (sobrevive recriação de pods worker)
+    enabled: true
     # Volume size for logs
-    size: 100Gi
+    size: 20Gi
     # Annotations for the logs PVC
     annotations: {}
     # If using a custom storageClass, pass name here
-    storageClassName:
+    storageClassName: local-path
     ## the name of an existing PVC to use
     existingClaim:
     ## the subpath of the existing PVC to use
