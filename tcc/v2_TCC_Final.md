@@ -23,7 +23,7 @@ Notas para conversão MANUAL para .docx no template oficial USP:
 ═══════════════════════════════════════════════════════════════════════════════
 -->
 
-# Avaliação de metodologias e técnicas para implementação de uma stack moderna de dados open source
+# Avaliação de metodologias e técnicas para implementação de uma *stack* moderna de dados *open source*
 
 Bruno Czarnescki¹*; Ernane José Xavier Costa²
 
@@ -35,7 +35,7 @@ Bruno Czarnescki¹*; Ernane José Xavier Costa²
 
 ## Resumo
 
-Este trabalho apresentou a implementação e avaliação de uma stack moderna de engenharia de dados baseada exclusivamente em tecnologias *open source*, executada em ambiente *Kubernetes* (K3s) gerenciado via *GitOps* (Argo CD). A stack integrou Apache Airflow para orquestração, MinIO como *data lake* compatível com S3, ClickHouse como motor analítico colunar, dbt para transformações governadas e Grafana/Prometheus para observabilidade. A avaliação adotou a arquitetura *medallion* (bronze/silver/gold) e utilizou dados reais do programa *High Volume For-Hire Vehicles* da cidade de Nova York, totalizando aproximadamente 232 milhões de registros distribuídos em 12 arquivos *Parquet*. Os resultados demonstraram a viabilidade técnica e o desempenho competitivo da abordagem *open source*, apresentando indicadores quantitativos de tempo de execução do pipeline ponta a ponta, propriedades físicas das camadas materializadas e o ganho mensurável da arquitetura *medallion* em duas perguntas de negócio semanticamente equivalentes, com consultas na camada gold executando em ordens de grandeza menos tempo que sobre a camada bronze. Uma análise comparativa com a plataforma gerenciada Databricks evidenciou os *trade-offs* entre custo, complexidade operacional, portabilidade e governança, sustentada por uma validação experimental: o mesmo projeto dbt foi reexecutado num *SQL Warehouse Serverless* 2X-Small do Databricks via troca de *adapter*, e as duas perguntas-chave do *benchmark* foram repetidas com a mesma metodologia, confirmando que o padrão de melhoria entre as camadas se mantém embora a magnitude absoluta dos tempos varie por ordens de grandeza entre as duas plataformas, com implicações quantificáveis em custo recorrente e tempo de resposta interativa.
+Este trabalho implementou e avaliou quantitativamente uma *stack* de engenharia de dados composta exclusivamente por tecnologias *open source*, em **configuração single-node** sobre *Kubernetes* (K3s) gerenciado via *GitOps* (Argo CD). A *stack* integrou Apache Airflow e Astronomer Cosmos para orquestração, MinIO como *data lake* compatível com S3, ClickHouse como motor analítico colunar, dbt para transformações governadas, Metabase para visualização e Prometheus/Grafana para observabilidade. A avaliação adotou a arquitetura *medallion* (bronze/silver/gold) sobre 232 milhões de registros do programa *High Volume For-Hire Vehicles* da cidade de Nova York, distribuídos em doze arquivos *Parquet* mensais de 2023. Os resultados quantificaram o tempo do pipeline ponta a ponta, as propriedades físicas das camadas materializadas e o ganho da camada gold em duas perguntas de negócio semanticamente equivalentes, com consultas no gold executando em pelo menos três ordens de grandeza menos tempo do que sobre o bronze. A pesquisa incluiu ainda uma validação cruzada em plataforma gerenciada: o mesmo projeto dbt foi reexecutado em um *SQL Warehouse Serverless* 2X-Small do Databricks via troca de *adapter*, e as duas perguntas-chave do *benchmark* foram repetidas com a mesma metodologia. O padrão de aceleração intra-plataforma — isto é, o ganho proporcional ao avançar de bronze para gold — foi preservado em ambos os engines, embora a magnitude absoluta dos tempos no gold tenha diferido em duas a três ordens de grandeza e o custo recorrente estimado tenha diferido em cerca de uma ordem de grandeza. A combinação dessas evidências oferece subsídios objetivos para decisões de arquitetura entre soluções auto-hospedadas e gerenciadas em projetos analíticos de pequeno e médio porte.
 
 **Palavras-chave:** engenharia de dados; *open source*; Kubernetes; dbt; arquitetura *medallion*
 
@@ -45,11 +45,11 @@ Este trabalho apresentou a implementação e avaliação de uma stack moderna de
 
 O cenário contemporâneo da tecnologia da informação é caracterizado pelo crescimento acelerado no volume, na velocidade e na variedade dos dados produzidos por organizações e dispositivos conectados. Esse fenômeno impõe desafios significativos para empresas que pretendem extrair valor analítico e suportar a tomada de decisão baseada em evidências. A engenharia de dados emerge nesse contexto como disciplina central, dedicada à concepção e operação de sistemas robustos para coleta, armazenamento, processamento e disponibilização de dados em escala (Reis e Housley, 2022).
 
-A adoção de uma stack moderna baseada em ferramentas *open source* tem sido uma alternativa estratégica relevante. Reis e Housley (2022) descrevem o ciclo de vida da engenharia de dados como uma sequência integrada de geração, ingestão, transformação, armazenamento e servimento de dados, na qual ferramentas abertas oferecem flexibilidade arquitetural, ausência de custos de licenciamento e ampla integração com ecossistemas estabelecidos. Essa abordagem é particularmente atrativa para organizações que precisam controlar a totalidade de sua infraestrutura, evitar dependência de fornecedor e adaptar componentes específicos às suas necessidades de governança.
+A adoção de uma *stack* moderna baseada em ferramentas *open source* tem sido uma alternativa estratégica relevante. Reis e Housley (2022) descrevem o ciclo de vida da engenharia de dados como uma sequência integrada de geração, ingestão, transformação, armazenamento e servimento de dados, na qual ferramentas abertas oferecem flexibilidade arquitetural, ausência de custos de licenciamento e ampla integração com ecossistemas estabelecidos. Essa abordagem é particularmente atrativa para organizações que precisam controlar a totalidade de sua infraestrutura, evitar dependência de fornecedor e adaptar componentes específicos às suas necessidades de governança.
 
-Apesar do interesse crescente, a literatura ainda apresenta lacunas quanto à integração prática de múltiplas ferramentas em uma stack coesa, especialmente em cenários auto-hospedados sobre orquestradores de contêineres. As decisões de arquitetura — escolha do formato de armazenamento, do motor analítico, do orquestrador e da camada de transformação — envolvem *trade-offs* que dificilmente são quantificados de forma isolada. Persistem ainda dúvidas sobre o ganho real que padrões consolidados como a arquitetura *medallion* (Databricks, 2022) trazem para cargas analíticas reais quando comparados a abordagens mais simples.
+Apesar do interesse crescente, a literatura ainda apresenta lacunas quanto à integração prática de múltiplas ferramentas em uma *stack* coesa, especialmente em cenários auto-hospedados sobre orquestradores de contêineres. As decisões de arquitetura — escolha do formato de armazenamento, do motor analítico, do orquestrador e da camada de transformação — envolvem *trade-offs* que dificilmente são quantificados de forma isolada. Persistem ainda dúvidas sobre o ganho real que padrões consolidados como a arquitetura *medallion* (Databricks, 2022) trazem para cargas analíticas reais quando comparados a abordagens mais simples.
 
-O objetivo deste trabalho foi implementar e avaliar quantitativamente uma stack moderna de engenharia de dados composta exclusivamente por componentes *open source*, executada sobre um cluster Kubernetes leve (K3s), orquestrada via Apache Airflow, com armazenamento em MinIO, processamento analítico em ClickHouse e transformações governadas em dbt. A avaliação abrangeu o desempenho do pipeline ponta a ponta, as propriedades físicas das camadas materializadas, o ganho mensurável da arquitetura *medallion* em perguntas de negócio sobre 232 milhões de registros, e uma análise comparativa com a plataforma gerenciada Databricks complementada por uma validação experimental quantitativa em que o mesmo projeto dbt foi reexecutado em ambas as plataformas e as duas perguntas-chave do *benchmark* foram repetidas com a mesma metodologia, com implicações quantificáveis em custo recorrente e tempo de resposta.
+O objetivo deste trabalho foi implementar e avaliar quantitativamente uma *stack* moderna de engenharia de dados composta exclusivamente por componentes *open source*, em **configuração single-node** sobre um cluster Kubernetes leve (K3s), orquestrada via Apache Airflow, com armazenamento em MinIO, processamento analítico em ClickHouse e transformações governadas em dbt. A avaliação abrangeu o desempenho do pipeline ponta a ponta, as propriedades físicas das camadas materializadas, o ganho mensurável da arquitetura *medallion* em perguntas de negócio sobre 232 milhões de registros, e uma análise comparativa com a plataforma gerenciada Databricks complementada por uma validação experimental quantitativa em que o mesmo projeto dbt foi reexecutado em ambas as plataformas e as duas perguntas-chave do *benchmark* foram repetidas com a mesma metodologia, com implicações quantificáveis em custo recorrente e tempo de resposta.
 
 ---
 
@@ -65,7 +65,7 @@ Para cada etapa do ciclo de dados, foi aplicada uma metodologia compatível com 
 - **Transformação e governança de dados** — O dbt (dbt Labs, 2023) foi adotado para aplicar práticas de engenharia de software aos pipelines analíticos, viabilizando versionamento, testes automatizados e documentação das transformações SQL. O dbt facilitou a construção de modelos transformados e garantiu a qualidade e a consistência dos dados antes de serem consumidos para análise.
 - **Armazenamento de objetos** — Os dados brutos foram armazenados no MinIO (MinIO, Inc., 2023), um sistema de armazenamento de objetos de alto desempenho compatível com a API S3 da AWS, nativo de Kubernetes. Sua compatibilidade com a API S3 garantiu interoperabilidade com diversas ferramentas do ecossistema de dados.
 - **Processamento analítico** — O banco colunar ClickHouse (Schulze et al., 2024) foi utilizado como motor *Online Analytical Processing* [OLAP], devido à sua capacidade de executar consultas em tempo real sobre volumes massivos de dados. O ClickHouse é otimizado para cargas analíticas, oferecendo desempenho elevado em cenários que exigem agregação e filtragem rápidas sobre grandes conjuntos de dados.
-- **Visualização e observabilidade** — A plataforma Metabase (Metabase Documentation, 2025) foi prevista para a criação de *dashboards* interativos. A observabilidade da stack foi instrumentada com Prometheus e Grafana, totalizando 15 *dashboards* que cobriram o cluster Kubernetes, Airflow, ClickHouse, MinIO e métricas das tabelas analíticas.
+- **Visualização e observabilidade** — A plataforma Metabase (Metabase Documentation, 2025) foi prevista para a criação de *dashboards* interativos. A observabilidade da *stack* foi instrumentada com Prometheus e Grafana, totalizando 15 *dashboards* que cobriram o cluster Kubernetes, Airflow, ClickHouse, MinIO e métricas das tabelas analíticas.
 
 **Arquitetura de dados medallion**
 
@@ -77,7 +77,7 @@ A escolha da arquitetura *medallion* para esta pesquisa foi motivada por quatro 
 
 **Ambiente de execução**
 
-Para a execução e orquestração dos componentes da stack optou-se pela utilização de um cluster K3s, distribuição leve do Kubernetes, em configuração *single-node* (K3s Documentation, 2025). A escolha foi estratégica para a Prova de Conceito acadêmica, visando maximizar o *throughput* e minimizar o *operational toil*. Uma instalação *single-node* server já integra todos os componentes essenciais do Kubernetes — *control-plane*, *datastore*, *kubelet* e *containerd* — estando pronta para hospedar cargas de trabalho sem agentes adicionais. A versão v1.33.1+k3s1 acompanha o Kubernetes v1.33.1, assegurando conformidade com a *Cloud Native Computing Foundation* [CNCF]. A arquitetura *single-node* minimizou o *overhead* de virtualização em CPU, memória, rede e disco, eliminou *hops* de rede entre componentes e reduziu a variação de latência, fator importante para a reprodutibilidade dos resultados quantitativos coletados. Para uma Prova de Conceito acadêmica, a ausência de Alta Disponibilidade [HA] foi compensada por *snapshots* do hipervisor para recuperação de desastres, e a adição de mais nós acrescentaria complexidade sem benefício real, dado que o *host* físico permanece como ponto único de falha.
+Para a execução e orquestração dos componentes da *stack* optou-se pela utilização de um cluster K3s, distribuição leve do Kubernetes, em configuração *single-node* (K3s Documentation, 2025). A escolha foi estratégica para a Prova de Conceito acadêmica, visando maximizar o *throughput* e minimizar o *operational toil*. Uma instalação *single-node* server já integra todos os componentes essenciais do Kubernetes — *control-plane*, *datastore*, *kubelet* e *containerd* — estando pronta para hospedar cargas de trabalho sem agentes adicionais. A versão v1.32.5+k3s1 acompanha o Kubernetes v1.32.5, assegurando conformidade com a *Cloud Native Computing Foundation* [CNCF]. A arquitetura *single-node* minimizou o *overhead* de virtualização em CPU, memória, rede e disco, eliminou *hops* de rede entre componentes e reduziu a variação de latência, fator importante para a reprodutibilidade dos resultados quantitativos coletados. Para uma Prova de Conceito acadêmica, a ausência de Alta Disponibilidade [HA] foi compensada por *snapshots* do hipervisor para recuperação de desastres, e a adição de mais nós acrescentaria complexidade sem benefício real, dado que o *host* físico permanece como ponto único de falha.
 
 *Tabela 1 — Especificação do nó utilizado nos experimentos*
 
@@ -85,16 +85,39 @@ Para a execução e orquestração dos componentes da stack optou-se pela utiliz
 |---|---|
 | CPU | 12 vCPUs |
 | Memória | 24 GiB |
-| Disco | 200 GiB SSD (local-path) |
+| Disco | 200 GiB SSD (*local-path*) |
 | Sistema operacional | Ubuntu 22.04 LTS |
-| Kubernetes | K3s v1.33.1 |
+| Kubernetes | K3s v1.32.5+k3s1 |
 | Hipervisor | Proxmox VE |
 
-Fonte: Dados originais da pesquisa
+Fonte: Resultados originais da pesquisa
+
+*Tabela 1b — Versões dos componentes da stack utilizados no experimento*
+
+| Componente | Versão |
+|---|---|
+| K3s / Kubernetes | v1.32.5+k3s1 (Kubernetes 1.32.5) |
+| Argo CD | v3.3.6 (App-of-Apps) |
+| Apache Airflow | 3.1.8 (imagem `bx-airflow:3.1.8-cosmos1.14.0`) |
+| Astronomer Cosmos | 1.14.0 |
+| dbt-core | 1.11.8 |
+| dbt-clickhouse (target ClickHouse) | 1.x compatível com dbt-core 1.11 |
+| dbt-databricks (target Databricks) | 1.11.7 |
+| ClickHouse | 25.5.2.47 |
+| MinIO | RELEASE.2023-06-23T20-26-00Z |
+| Prometheus | 2.54.1 |
+| Grafana | 11.2.0 |
+| Metabase | imagem oficial (deploy via Helm chart) |
+| Databricks SQL Serverless | *warehouse* 2X-Small, dbsql_version 2026.10 |
+
+Fonte: Resultados originais da pesquisa
 
 **Gerenciamento de infraestrutura via GitOps**
 
-O Argo CD, ferramenta declarativa de *GitOps* para entrega contínua sobre Kubernetes, foi adotado para implantação e gerenciamento da infraestrutura da stack no cluster K3s (Argo CD, 2025). Por meio do Argo CD, os manifestos de *deploy* para Airflow, MinIO e ClickHouse foram versionados em um repositório Git e sincronizados automaticamente com o cluster, garantindo que o estado desejado da infraestrutura fosse mantido e facilitando reprodutibilidade, auditoria e recuperação de desastres. O padrão *App-of-Apps* foi adotado: uma aplicação raiz observa o diretório de manifestos e reconcilia automaticamente todas as aplicações filhas, com *self-heal* habilitado.
+O Argo CD, ferramenta declarativa de *GitOps* para entrega contínua sobre Kubernetes, foi adotado para implantação e gerenciamento da infraestrutura da *stack* no cluster K3s (Argo CD, 2025). Por meio do Argo CD, os manifestos de *deploy* para Airflow, MinIO e ClickHouse foram versionados em um repositório Git e sincronizados automaticamente com o cluster, garantindo que o estado desejado da infraestrutura fosse mantido e facilitando reprodutibilidade, auditoria e recuperação de desastres. O padrão *App-of-Apps* foi adotado: uma aplicação raiz observa o diretório de manifestos e reconcilia automaticamente todas as aplicações filhas, com *self-heal* habilitado.
+
+<img width="2159" height="1736" alt="image" src="https://github.com/user-attachments/assets/53ceeda9-7adc-4510-9eec-98aefdd64491" />
+
 
 <!-- FIGURA 1 — INSERIR IMAGEM AQUI
 Captura: tela de Applications do Argo CD mostrando o conjunto de aplicações gerenciadas pelo padrão App-of-Apps — root-app, airflow10, clickhouse, grafana, metabase, minio-operator, minio-tenant, prometheus — todas com status Healthy.
@@ -112,6 +135,7 @@ Fonte: Resultados originais da pesquisa
 
 O pipeline foi implementado como uma única DAG Airflow nomeada `fhvhv_pipeline`, composta pelas *tasks* `create_schemas`, `ingest_bronze_trips`, `ingest_bronze_zones`, `dbt_transform` e `optimize_tables`, executadas sequencialmente. A *task* `create_schemas` cria os bancos `bronze`, `silver` e `gold` no ClickHouse. A *task* `ingest_bronze_trips` ingere os 12 *Parquets* do MinIO no `bronze.fhvhv_trips`, processando um mês por vez para respeitar o limite de memória do ClickHouse. A *task* `ingest_bronze_zones` carrega o CSV de zonas em `bronze.taxi_zones`. A *task* `dbt_transform`, gerada automaticamente pelo *Astronomer Cosmos*, executa cada modelo dbt como uma *task* Airflow nativa. Por fim, `optimize_tables` aplica `OPTIMIZE TABLE FINAL` em todas as tabelas materializadas, consolidando partes do *MergeTree* e reciclando espaço em disco.
 
+<img width="1940" height="1204" alt="fhvhv_pipeline-graph" src="https://github.com/user-attachments/assets/d32c14c6-b080-44c4-ac21-988a8d006850" />
 <!-- FIGURA 2 — INSERIR IMAGEM AQUI
 Captura: grafo da DAG `fhvhv_pipeline` no Airflow UI, mostrando o encadeamento das tasks: create_schemas → [ingest_bronze_trips, ingest_bronze_zones] → dbt_transform (grupo expandido com os modelos silver e gold do Cosmos) → optimize_tables.
 Onde capturar: Airflow UI > DAGs > fhvhv_pipeline > aba "Graph" em uma execução recente de sucesso. Se o grupo `dbt_transform` vier colapsado, clicar para expandir e mostrar os nós dos modelos dbt.
@@ -128,7 +152,9 @@ Fonte: Resultados originais da pesquisa
 
 O projeto dbt contém dois modelos da camada silver e cinco modelos da camada gold. O modelo `fhvhv_trips_clean` aplica tipagem, filtros de qualidade — descartando corridas com tarifa-base não positiva, milhagem fora do intervalo de zero a 200 e duração fora do intervalo de zero a seis horas — e calcula métricas derivadas como `waiting_minutes`, `trip_minutes`, `total_amount` e `driver_pct_of_fare`. O modelo `fhvhv_trips_enriched` é uma *view* que enriquece o silver limpo com nomes de *borough* e *zone* via *join* com `taxi_zones`. Os modelos gold são `daily_revenue` (receita e volume diário com métricas de mediana e percentil 95 da tarifa), `hourly_demand` (mapa de calor por dia da semana e hora), `borough_pairs` (pares origem-destino por *borough*), `driver_economics` (performance mensal dos motoristas) e `shared_vs_solo` (comparativo entre viagens individuais e compartilhadas).
 
-Cada modelo possui testes de qualidade declarados no arquivo `schema.yml`, com verificações de não-nulidade em colunas críticas e de unicidade em chaves de agregação como `trip_date` e `month`. O arquivo `sources.yml` declara as fontes bronze, permitindo que o dbt rastreie a linhagem desde a origem. O comando `dbt docs generate` produz um *site* interativo com lineage gráfico, descrições de modelos e colunas e resultados de testes, publicado no endereço público da pesquisa.
+Cada modelo possui testes de qualidade declarados no arquivo `schema.yml`, com verificações de não-nulidade em colunas críticas e de unicidade em chaves de agregação como `trip_date` e `month`. O arquivo `sources.yml` declara as fontes bronze, permitindo que o dbt rastreie a linhagem desde a origem. O comando `dbt docs generate` produz um *site* interativo com *lineage* gráfico, descrições de modelos e colunas e resultados de testes, publicado no endereço público da pesquisa.
+
+<img width="2136" height="1717" alt="image" src="https://github.com/user-attachments/assets/6bc53606-9acc-4c95-a02e-fe3ff6d4fbeb" />
 
 <!-- FIGURA 3 — INSERIR IMAGEM AQUI
 Captura: grafo de linhagem (lineage) gerado pelo `dbt docs generate`, mostrando o fluxo bronze.fhvhv_trips → silver.fhvhv_trips_clean → silver.fhvhv_trips_enriched → (5 modelos gold), com setas de dependência.
@@ -138,9 +164,11 @@ Formato: PNG, cores padrão do dbt docs, proporção retangular horizontal. -->
 
 *Figura 3 — Grafo de linhagem dos modelos dbt (bronze → silver → gold)*
 
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: grafo de lineage gerado pelo `dbt docs generate`, mostrando o fluxo bronze.fhvhv_trips e bronze.taxi_zones → silver.fhvhv_trips_clean → silver.fhvhv_trips_enriched → cinco nós gold (daily_revenue, hourly_demand, borough_pairs, driver_economics, shared_vs_solo) com setas de dependência e cores padrão do dbt docs.)**
+**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: grafo de lineage gerado pelo `dbt docs generate`, exibindo os nove nós do projeto e suas dependências: as duas *sources* bronze (`bronze.fhvhv_trips` e `bronze.taxi_zones`) alimentam os dois modelos silver — `fhvhv_trips_clean` recebe diretamente de `bronze.fhvhv_trips`, e `fhvhv_trips_enriched` resulta do *join* entre `fhvhv_trips_clean` e `bronze.taxi_zones`. Quatro modelos gold (`daily_revenue`, `hourly_demand`, `driver_economics`, `shared_vs_solo`) derivam diretamente de `fhvhv_trips_clean`, enquanto `borough_pairs` deriva de `fhvhv_trips_enriched` por necessitar dos nomes de *borough*. As setas de dependência e as cores padrão do dbt docs evidenciam a estrutura medalhão preservada de ponta a ponta.)**
 
 Fonte: Resultados originais da pesquisa
+
+<img width="2145" height="1295" alt="image" src="https://github.com/user-attachments/assets/2b7df7d4-2788-4ab4-b591-f633d96f6f2b" />
 
 <!-- FIGURA 4 — INSERIR IMAGEM AQUI
 Captura: saída do comando `dbt test` mostrando todas as asserções aprovadas (not_null, unique, relationships), preferencialmente pelos logs da task dbt_test do Airflow ou por terminal com a execução local do dbt.
@@ -154,9 +182,17 @@ Formato: PNG do texto do log, recorte focado no bloco de sumário dos testes. --
 
 Fonte: Resultados originais da pesquisa
 
+**Validação cruzada em plataforma gerenciada**
+
+Para complementar a análise da *stack* auto-hospedada com evidência comparativa quantitativa, esta pesquisa adotou um procedimento de validação cruzada em plataforma gerenciada de mercado, motivado pela lacuna identificada na introdução sobre a falta de comparações empíricas entre soluções *self-hosted* e *managed* em projetos auto-hospedados de pequeno porte. A plataforma escolhida foi o Databricks, referência de mercado para *engines* OLAP gerenciados sobre *lakehouse* (Schulze et al., 2024). O princípio operacional adotado foi o de *adapter swapping* do dbt: o mesmo projeto analítico (modelos, testes, *sources* e *docs*) foi instanciado em um segundo ambiente substituindo o *adapter* `dbt-clickhouse` por `dbt-databricks` no `profiles.yml`, com adaptações mínimas de dialeto SQL (`toFloat32(...)` → `CAST(... AS FLOAT)`, `dateDiff('minute', a, b)` → `timestampdiff(MINUTE, a, b)`, `quantile(0.5)(col)` → `percentile_approx(col, 0.5)` e remoção de diretivas específicas do *MergeTree* como `order_by` e `settings`).
+
+O ambiente Databricks utilizado foi um *SQL Warehouse Serverless* tamanho 2X-Small (4 DBU/h) na nuvem AWS, sob a modalidade *Free Edition* da plataforma. Por restrições de cota dessa modalidade, a validação foi executada sobre **um mês de dados** (janeiro de 2023, 18,5 milhões de registros) em vez do ano completo utilizado no ClickHouse. Essa restrição é compatível com o objetivo do procedimento — observar o **padrão de aceleração intra-plataforma** — uma vez que o ganho relativo entre camadas é uma proporção que se mantém ao variar a escala absoluta de dados; a comparação direta dos tempos absolutos entre os dois engines não é o objetivo metodológico desta validação. A medalhão do Databricks foi construída como dois modelos *bronze* materializados como *views* sobre arquivos *Parquet* em um *Unity Catalog Volume*, dois modelos *silver* (sendo um *table* e um *view*) e dois modelos *gold* materializados como tabelas em formato Delta — totalizando seis modelos suficientes para alimentar Q1 e Q2.
+
+A metodologia de medição foi mantida idêntica à usada no ClickHouse: para cada par (camada, pergunta), foram realizadas duas iterações de aquecimento de *cache* (descartadas) e cinco medições efetivas. Coleta-se: tempo, coeficiente de variação e identificador da consulta. Uma **diferença de instrumentação** importante deve ser explicitada: enquanto o ClickHouse reporta `query_duration_ms` server-pure (somente o tempo de processamento no *engine*) via `query_log`, no Databricks o tempo foi coletado via API REST como wall-clock entre o envio do *statement* e o estado `SUCCEEDED`, incluindo portanto rede e fila de execução. Essa diferença é o motivo pelo qual a comparação direta dos absolutos cross-platform foi explicitamente desencorajada na seção de *Resultados*; o tratamento adequado é a leitura do **padrão de aceleração** dentro de cada plataforma como evidência da arquitetura *medallion*. Os dados brutos das medições estão disponíveis em `tcc/evidencias/databricks_benchmark.json` no repositório do projeto.
+
 **Disponibilização do código-fonte**
 
-Todo o desenvolvimento e os artefatos relacionados ao projeto foram disponibilizados publicamente em repositório Git, permitindo a reprodução integral dos resultados apresentados. O repositório contém as DAGs Airflow do pipeline principal e dos *benchmarks*, o projeto dbt completo, os manifestos Kubernetes e as aplicações Argo CD, além dos próprios documentos do TCC e das evidências coletadas.
+Todo o desenvolvimento e os artefatos relacionados ao projeto foram disponibilizados publicamente em repositório Git, em <https://github.com/brunocza/mba_usp-data_stack>, permitindo a reprodução integral dos resultados apresentados. O repositório contém as DAGs Airflow do pipeline principal e dos *benchmarks*, ambos os projetos dbt (ClickHouse em `dags/dbt_demo/` e Databricks em `dbt_databricks/`), os manifestos Kubernetes e as aplicações Argo CD, além dos próprios documentos do TCC e das evidências coletadas, incluindo o JSON de medições brutas do Databricks.
 
 ---
 
@@ -181,31 +217,24 @@ Fonte: Resultados originais da pesquisa
 
 A maior parcela do tempo de execução concentrou-se na transformação dbt e no `OPTIMIZE FINAL`, etapas em que o ClickHouse precisa percorrer toda a tabela bronze para gerar as camadas silver e gold e consolidar partes do *MergeTree*. A ingestão do bronze, embora processe 232 milhões de registros, beneficia-se da leitura paralela dos *Parquets* e do compactador colunar nativo, mantendo o tempo total em poucos minutos para o volume considerado. O mínimo de 90 segundos do total do pipeline corresponde a uma execução em que apenas as *tasks* de transformação dbt foram reexecutadas sobre o bronze já materializado — caso comum de iteração incremental sem reingestão.
 
-<!-- FIGURA 5 — INSERIR IMAGEM AQUI
-Captura: tela de "DAG Runs" do Airflow UI para a DAG `fhvhv_pipeline`.
-Onde capturar: Airflow UI > DAGs > fhvhv_pipeline > aba "Runs" (ou "Grid"), filtrar por state=success.
-O que destacar: pelo menos 9 execuções todas com status verde (success), mostrando coluna de duração e timestamps. Evidencia a reprodutibilidade e a base estatística das médias apresentadas na Tabela 2.
-Formato: PNG, largura mínima 900 px, sem anotações sobre a imagem (USP exige gráfico limpo). -->
+<img width="2151" height="1695" alt="image" src="https://github.com/user-attachments/assets/e9a49c03-bed7-4999-96be-1cb225b1b808" />
 
-*Figura 5 — Execuções bem-sucedidas da DAG fhvhv_pipeline na interface do Airflow*
+*Figura 5 — Execuções da DAG fhvhv_pipeline na interface do Airflow*
 
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: lista ou grade de "DAG Runs" do Airflow UI para a DAG `fhvhv_pipeline`, exibindo ao menos nove execuções com o estado success em verde, com colunas visíveis de run_id, start_date e duration, evidenciando a reprodutibilidade e a base estatística das médias apresentadas na Tabela 2.)**
+A Figura 5 exibe o histórico de execuções da DAG `fhvhv_pipeline`: doze execuções bem-sucedidas (estado *Success*), distribuídas entre execuções manuais (deflagradas pelo usuário) e execuções programadas (deflagradas pelo *timetable* horário), com durações da ordem de seis a quatorze minutos coerentes com os tempos médios reportados na Tabela 2; e uma execução em andamento no momento da captura (estado *Running*), iniciada pelo *scheduler* às 20:00 do dia 27 de abril de 2026, evidenciando que a *stack* permaneceu operacional e em uso após a coleta dos dados estatísticos. A reprodutibilidade da arquitetura é sustentada pelas execuções verdes consecutivas e pela ausência de execuções em estado *failed*, com as variações de duração refletindo principalmente diferenças entre execuções incrementais (apenas transformações dbt) e execuções completas (reingestão dos *Parquets*).
 
 Fonte: Resultados originais da pesquisa
 
 **Uso de recursos computacionais**
 
-A análise de recursos computacionais foi conduzida com base nas métricas exportadas pelos *exporters* do Prometheus, observadas em tempo real nos *dashboards* de Grafana. A instrumentação cobriu CPU, memória, E/S de disco e rede dos *namespaces* `warehouse` (ClickHouse) e `orchestrator2` (componentes Airflow), totalizando 15 *dashboards* dedicados aos componentes da stack e ao nó K3s hospedeiro.
+A análise de recursos computacionais foi conduzida com base nas métricas exportadas pelos *exporters* do Prometheus, observadas em tempo real nos *dashboards* de Grafana. A instrumentação cobriu CPU, memória, E/S de disco e rede dos *namespaces* `warehouse` (ClickHouse) e `orchestrator2` (componentes Airflow), totalizando 15 *dashboards* dedicados aos componentes da *stack* e ao nó K3s hospedeiro.
 
-<!-- FIGURA 6 — INSERIR IMAGEM AQUI
-Captura: painel do Grafana mostrando CPU usage e memory working set do pod `clickhouse-shard0-0` do namespace `warehouse` durante uma execução completa da DAG `fhvhv_pipeline` — ou, em alternativa, o dashboard consolidado do cluster durante o intervalo da execução.
-Onde capturar: Grafana (ex.: grafana.bxdatalab.com) > dashboards > escolher o painel de ClickHouse ou Node Exporter > ajustar intervalo para uma janela de ~15 min cobrindo uma execução recente do fhvhv_pipeline (ver os start_date/end_date do Airflow para alinhar a janela).
-O que destacar: (a) pico de CPU durante a etapa de ingestão e durante o OPTIMIZE FINAL; (b) patamar de memória estável em poucos GiB, bem abaixo do limite de 24 GiB do nó; (c) duração do intervalo marcado coincidente com o tempo médio da Tabela 2. Evidencia o uso eficiente de recursos e a ausência de saturação.
-Formato: PNG do painel, fundo escuro padrão do Grafana ou claro — ambos aceitos. -->
 
-*Figura 6 — Utilização de CPU e memória do ClickHouse durante uma execução do pipeline, observada no Grafana*
+<img width="2151" height="1735" alt="image" src="https://github.com/user-attachments/assets/ec584ec3-6409-4a22-878f-2f581446f212" />
 
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: painel do Grafana com dois gráficos de séries temporais lado a lado — CPU usage e memory working set — do pod `clickhouse-shard0-0` do namespace warehouse durante uma janela de aproximadamente 15 minutos cobrindo uma execução completa do `fhvhv_pipeline`, evidenciando o pico de CPU durante ingestão e OPTIMIZE FINAL e o patamar estável de memória bem abaixo do limite de 24 GiB do nó.)**
+*Figura 6 — Comportamento do ClickHouse durante uma execução do pipeline observado no Grafana (uso de RAM, duração de consultas, taxa de queries, merges ativos e tamanho das tabelas)*
+
+A Figura 6 evidenciou o uso eficiente de recursos durante uma execução do `fhvhv_pipeline`. O *Peak RAM Usage* atingiu cerca de 1,5 GiB, valor bem abaixo do limite de 24 GiB do nó (Tabela 1) — folga estrutural que comporta cargas significativamente maiores. O painel *Peak Query Duration* exibiu picos sincronizados às fases de ingestão e de `OPTIMIZE FINAL` do pipeline. O painel *Parts Merges* mostrou um *merge* ativo em `silver.fhvhv_trips_clean` em aproximadamente 95% de progresso, evidenciando o `OPTIMIZE` em andamento. Por fim, os tamanhos reportados na seção *Table Sizes* — bronze `fhvhv_trips` em 11,85 GiB para 232 milhões de linhas, silver `fhvhv_trips_clean` em 6,87 GiB e gold `daily_revenue` em 19,61 KiB para 365 linhas — são coerentes com os valores apresentados na Tabela 3, confirmando a consistência entre as métricas de instrumentação e a inspeção física das tabelas.
 
 Fonte: Resultados originais da pesquisa
 
@@ -234,64 +263,70 @@ A razão de compressão moderada, próxima de duas a três vezes, refletiu o uso
 
 Para quantificar o valor agregado pela transformação dbt, a DAG `benchmark_medallion_dag` executa duas perguntas de negócio semanticamente equivalentes em cada uma das três camadas e coleta métricas diretamente de `system.query_log` do ClickHouse. Cada consulta é identificada por um `log_comment` único, permitindo correlacionar a execução com o registro do *engine*. A DAG executa duas iterações de aquecimento de *cache*, descartadas, seguidas de cinco medições efetivas por execução. Cada execução completa é tratada como um teste independente e persistida em `benchmark.medallion_results`, identificada por `run_id` e `captured_at`. As perguntas avaliadas foram: Q1 — receita diária do ano de 2023, que no bronze exige a reconstrução da coluna `total_amount` pela soma de sete colunas com conversão para `Float64` e filtragem por janela temporal, no silver lê a tabela já limpa, e no gold lê diretamente `daily_revenue`; e Q2 — top 10 pares origem-destino por *borough* por receita, que no bronze exige dois *joins* com `taxi_zones` e conversões de `LocationID`, no silver lê a *view* enriquecida, e no gold lê `borough_pairs`. As métricas coletadas por iteração foram `query_duration_ms`, `read_rows`, `read_bytes`, `memory_usage` e `result_rows`.
 
-A análise a seguir consolida 54 amostras por camada em cada pergunta, acumuladas ao longo de dez execuções independentes da DAG.
+A análise a seguir consolida 54 amostras por camada em cada pergunta, acumuladas ao longo de dez execuções independentes da DAG. Para comparar o desempenho entre camadas adotou-se a métrica de **aceleração relativa** — denominada na literatura técnica como *speedup* — definida como a razão entre o tempo de execução da camada de referência (bronze) e o tempo de execução da camada avaliada (silver ou gold). Em termos práticos, uma aceleração de 5,4× indica que a consulta na camada avaliada respondeu em um quinto do tempo gasto pela mesma consulta no bronze; uma aceleração de 6.266× indica que respondeu em um seis-mil-duzentos-e-sessenta-e-seis avos do tempo. Essa métrica isola o ganho proporcional da arquitetura *medallion* sem depender de unidades absolutas de tempo, o que a torna comparável entre engines com características de hardware e instrumentação distintas.
 
 *Tabela 4 — Q1: receita diária de 2023, médias sobre 54 amostras (10 execuções × 5 iterações)*
 
-| Camada | Engine avg (ms) | Read rows | Read bytes | Memory peak | Speedup vs bronze |
+| Camada | Tempo médio (ms) | Linhas lidas | Bytes lidos | Memória de pico | Aceleração vs bronze |
 |---|---:|---:|---:|---:|---:|
 | bronze | 26.315 | 210.963.166 | 14,15 GiB | 44,3 MiB | 1,0× (linha-base) |
 | silver | 4.872 | 232.410.875 | 3,03 GiB | 16,7 MiB | 5,4× |
-| gold | 4,2 | 365 | 7,13 KiB | 0 B | ≈6.266× |
+| gold | 4,2 | 365 | 7,13 KiB | 0 B | ≈6.266× ¹ |
 
-Fonte: Resultados originais da pesquisa
+Fonte: Resultados originais da pesquisa. ¹ Estimativa conservadora limitada pela resolução do `query_log` do ClickHouse (1 ms); ver discussão a seguir.
 
 *Tabela 5 — Q2: top 10 pares origem-destino por borough, médias sobre 54 amostras (10 execuções × 5 iterações)*
 
-| Camada | Engine avg (ms) | Read rows | Read bytes | Memory peak | Speedup vs bronze |
+| Camada | Tempo médio (ms) | Linhas lidas | Bytes lidos | Memória de pico | Aceleração vs bronze |
 |---|---:|---:|---:|---:|---:|
 | bronze | 52.544 | 210.963.696 | 17,68 GiB | 120,9 MiB | 1,0× (linha-base) |
 | silver | 31.459 | 232.411.405 | 2,38 GiB | 45,3 MiB | 1,7× |
-| gold | 12,4 | 45 | 765 B | 320 B | ≈4.237× |
+| gold | 12,4 | 45 | 765 B | 320 B | ≈4.237× ¹ |
 
-Fonte: Resultados originais da pesquisa
+Fonte: Resultados originais da pesquisa. ¹ Estimativa conservadora limitada pela resolução do `query_log` do ClickHouse (1 ms); ver discussão a seguir.
 
 O salto de desempenho entre bronze e gold ultrapassou três ordens de grandeza em ambas as perguntas. A diferença é explicada por três fatores complementares: o *scan* do *engine*, em que bronze e silver leram centenas de milhões de linhas enquanto gold acessou tabelas pré-agregadas com poucas centenas ou poucas dezenas de linhas; o volume de I/O, que caiu de 14 a 18 GiB no bronze para menos de 10 KiB no gold; e a ausência de operações por linha no gold, uma vez que agregações, conversões de tipo e *joins* já foram executadas durante a carga. O resultado validou empiricamente a arquitetura *medallion*: a camada gold materializada pelo dbt transformou consultas analíticas da ordem de dezenas de segundos para a ordem de milissegundos, viabilizando *dashboards* interativos e análises ad-hoc sobre o mesmo conjunto de dados bruto. A *task* `report_history` da DAG computa média, desvio-padrão e coeficiente de variação sobre todo o histórico persistido, permitindo avaliar a consistência *cross-run* das medições conforme novas execuções são acumuladas.
 
+Cabe um caveat de instrumentação relevante para a interpretação das Tabelas 4 e 5. A camada gold opera próxima ao limite de resolução do `query_duration_ms` reportado pelo `query_log` do ClickHouse (1 ms). Os tempos médios da camada gold (4,2 ms em Q1 e 12,4 ms em Q2) estão a poucas unidades acima desse piso, o que torna a *razão exata* da aceleração sensível à granularidade do instrumento. Os números reportados (≈6.266× em Q1 e ≈4.237× em Q2) devem, portanto, ser lidos como **estimativas conservadoras** indicando ganho **de pelo menos** três ordens de grandeza, sem que a magnitude precisa possa ser inferida com a resolução disponível. A interpretação prática mantém-se intacta: a diferença é grande o suficiente para alterar a classe de uso das consultas analíticas (de *batch* para interativo), o que é justamente o objetivo da camada gold materializada.
+
 <!-- FIGURA 7 — INSERIR IMAGEM AQUI
-Captura: saída do log da task `consolidate_results` ou `report_history` da DAG benchmark_medallion, mostrando a tabela formatada com as três camadas lado a lado, o speedup calculado e, idealmente, o bloco de estatística cross-run com CV%.
+Captura: saída do log da task `consolidate_results` ou `report_history` da DAG benchmark_medallion, mostrando a tabela formatada com as três camadas lado a lado, a aceleração calculada e, idealmente, o bloco de estatística cross-run com CV%.
 Onde capturar: Airflow UI > DAGs > benchmark_medallion > última execução > task consolidate_results (ou report_history) > Logs.
-O que destacar: as linhas mostrando engine_avg_ms por camada, o speedup numérico (Q1 ≈6.266× e Q2 ≈4.237×) e, se o print incluir, a coluna CV% demonstrando consistência <20% nas medições. Pode-se alternativamente capturar o grafo da DAG `benchmark_medallion` com as sete tasks em verde, evidenciando a orquestração da metodologia.
+O que destacar: as linhas mostrando engine_avg_ms por camada, a aceleração numérica (Q1 ≈6.266× e Q2 ≈4.237×) e, se o print incluir, a coluna CV% demonstrando consistência <20% nas medições. Pode-se alternativamente capturar o grafo da DAG `benchmark_medallion` com as sete tasks em verde, evidenciando a orquestração da metodologia.
 Formato: PNG do bloco de texto tabular, sem crop excessivo. -->
 
-*Figura 7 — Relatório consolidado do benchmark medallion com speedups por camada e consistência cross-run*
+*Figura 7 — Relatório consolidado do benchmark medallion com aceleração por camada e consistência cross-run*
 
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: saída textual tabular da task `consolidate_results` ou `report_history` da DAG benchmark_medallion, mostrando as três camadas bronze, silver e gold lado a lado com as colunas engine_avg, read_bytes e speedup, numericamente evidenciando o ganho de aproximadamente seis mil vezes para Q1 e quatro mil vezes para Q2, e — se visível no print — o bloco cross-run com coeficiente de variação inferior a vinte por cento por camada.)**
+**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: saída textual tabular da task `consolidate_results` ou `report_history` da DAG benchmark_medallion, mostrando as três camadas bronze, silver e gold lado a lado com as colunas engine_avg, read_bytes e aceleração, numericamente evidenciando o ganho de aproximadamente seis mil vezes para Q1 e quatro mil vezes para Q2, e — se visível no print — o bloco cross-run com coeficiente de variação inferior a vinte por cento por camada.)**
 
 Fonte: Resultados originais da pesquisa
 
 **Validação experimental no Databricks**
 
-Para complementar a análise qualitativa com evidência quantitativa, o mesmo projeto dbt — modelos SQL, testes, *sources* e geração de *docs* — foi instanciado num segundo ambiente Databricks por meio do princípio de *adapter swapping*: substituiu-se `dbt-clickhouse` por `dbt-databricks` no `profiles.yml`, com adaptações mínimas de dialeto (`toFloat32(...)` → `CAST(... AS FLOAT)`, `dateDiff('minute', a, b)` → `timestampdiff(MINUTE, a, b)`, `quantile(0.5)(col)` → `percentile_approx(col, 0.5)` e remoção de diretivas específicas do *MergeTree* como `order_by` e `settings`). O ambiente Databricks utilizado foi um *SQL Warehouse Serverless* tamanho 2X-Small, que aloca recursos de computação sob demanda na nuvem AWS, sem necessidade de provisionar máquinas. Por restrições de cota da modalidade gratuita do Databricks adotada para o estudo, a validação foi executada sobre **um mês de dados** (janeiro de 2023, 18,5 milhões de registros) em vez do ano completo utilizado no ClickHouse — o que não compromete a análise, dado que o *speedup* entre camadas é uma proporção que se mantém ao variar a escala. A metodologia de medição foi idêntica à usada no ClickHouse: duas iterações de aquecimento de *cache* descartadas, seguidas de cinco medições efetivas por camada e por pergunta. Os tempos foram coletados via API REST do Databricks no padrão *wall-clock* (do envio da query até o estado `SUCCEEDED`), análogo ao `query_duration_ms` reportado pelo ClickHouse.
+A metodologia da validação cruzada em plataforma gerenciada — incluindo critério de seleção da plataforma, princípio de *adapter swapping*, lista de adaptações de dialeto SQL, configuração do *warehouse* e diferenças de instrumentação entre `query_log` (ClickHouse) e wall-clock via API REST (Databricks) — está descrita na seção *Material e Métodos*, subseção *Validação cruzada em plataforma gerenciada*. Esta subseção apresenta os resultados experimentais e sua interpretação.
 
-A construção da medalhão completa pelo `dbt build` na plataforma Databricks levou 68,7 segundos do início ao fim, distribuídos entre as duas *views* de bronze (3,8 s cada), a tabela limpa de silver (46,8 s, etapa mais cara por incluir *cast* dos tipos, filtros de qualidade e escrita em formato Delta), a *view* enriquecida de silver (3,2 s) e as duas tabelas gold (8,6 s para *daily_revenue* e 10,4 s para *borough_pairs*). A Tabela 6 consolida as medições das mesmas duas perguntas executadas no ClickHouse, agora também executadas no Databricks com o mesmo método.
+A construção da medalhão completa pelo `dbt build` na plataforma Databricks levou 68,7 segundos do início ao fim, distribuídos entre as duas *views* de bronze (3,8 s cada), a tabela limpa de silver (46,8 s, etapa mais cara por incluir *cast* dos tipos, filtros de qualidade e escrita em formato Delta), a *view* enriquecida de silver (3,2 s) e as duas tabelas gold (8,6 s para *daily_revenue* e 10,4 s para *borough_pairs*).
 
-*Tabela 6 — Comparação experimental Q1 e Q2 entre ClickHouse e Databricks*
+*Tabela 6 — Aceleração intra-plataforma da arquitetura medallion: Databricks e ClickHouse lado a lado*
 
-| Pergunta | Camada | ClickHouse (ms) | Databricks (ms) | Razão DBX/CH |
-|---|---|---:|---:|---:|
-| Q1 — receita diária | bronze | 26.315 | 6.041 | 0,23× |
-| Q1 — receita diária | silver | 4.872 | 1.165 | 0,24× |
-| Q1 — receita diária | gold | 4,2 | 1.179 | 281× |
-| Q2 — top *borough pairs* | bronze | 52.544 | 7.741 | 0,15× |
-| Q2 — top *borough pairs* | silver | 31.459 | 3.325 | 0,11× |
-| Q2 — top *borough pairs* | gold | 12,4 | 1.089 | 88× |
+| Pergunta | Camada | Databricks ms (CV%) | Aceleração DBX vs bronze | ClickHouse ms (referência) | Aceleração CH vs bronze |
+|---|---|---:|---:|---:|---:|
+| Q1 — receita diária | bronze | 6.041 (3,5%) | 1,0× (linha-base) | 26.315 | 1,0× (linha-base) |
+| Q1 — receita diária | silver | 1.165 (5,3%) | 5,2× | 4.872 | 5,4× |
+| Q1 — receita diária | gold | 1.179 (5,2%) | 5,1× | 4,2 | ≈6.266× ¹ |
+| Q2 — top *borough pairs* | bronze | 7.741 (2,3%) | 1,0× (linha-base) | 52.544 | 1,0× (linha-base) |
+| Q2 — top *borough pairs* | silver | 3.325 (16,3%) | 2,3× | 31.459 | 1,7× |
+| Q2 — top *borough pairs* | gold | 1.089 (1,6%) | 7,1× | 12,4 | ≈4.237× ¹ |
 
-Fonte: Resultados originais da pesquisa. ClickHouse: 54 amostras (10 execuções × 5 iterações) sobre 232 milhões de registros. Databricks: 5 amostras sobre 18,5 milhões de registros, *SQL Warehouse Serverless* 2X-Small (4 DBU/h).
+Fonte: Resultados originais da pesquisa. ClickHouse: 54 amostras (10 execuções × 5 iterações) sobre 232 milhões de registros, tempos de `query_log.query_duration_ms` (server-pure). Databricks: 5 amostras sobre 18,5 milhões de registros (jan/2023), tempos de wall-clock via API REST do *SQL Warehouse Serverless* 2X-Small (4 DBU/h). ¹ Ver caveat sobre limite de resolução do `query_log` na discussão da Tabela 5.
 
-A Tabela 6 ilustra um achado central deste estudo: o **padrão de melhoria** ao subir na medalhão é confirmado nas duas plataformas — gold é mais rápido que bronze em ambas — porém a **magnitude do ganho difere por ordens de grandeza**. No ClickHouse o gold devolve a resposta de Q1 em cerca de 4 milissegundos e a de Q2 em cerca de 12 milissegundos. No Databricks Serverless 2X-Small, ambas as perguntas no gold levam aproximadamente um segundo. A diferença não decorre da qualidade do projeto dbt nem da arquitetura *medallion* em si, mas de um custo fixo de inicialização inerente a *engines* distribuídos sob demanda (orquestração, despacho de tarefas, leitura de metadados em armazenamento externo). Para volumes pequenos pré-agregados como os do gold, esse custo fixo domina o tempo total. Já o ClickHouse, por executar tudo em um único processo com tabelas em armazenamento local, evita esse custo e responde em microssegundos. Para o cenário de *dashboards* interativos e análises ad-hoc — objetivo central deste trabalho — essa diferença é perceptível: a stack auto-hospedada entrega gold em tempo de "instantâneo", enquanto a plataforma gerenciada introduz uma espera de cerca de um segundo por consulta.
+A Tabela 6 organiza o achado central deste estudo: o **padrão de aceleração intra-plataforma é preservado em ambos os engines**. Em Databricks, o gold respondeu de 5,1 a 7,1 vezes mais rápido que o bronze; em ClickHouse, o ganho é de duas a três ordens de grandeza. A leitura **direta cruzada** dos absolutos, contudo, é desencorajada por duas razões metodológicas explicitadas na seção *Material e Métodos*: a escala de dados difere por um fator 12 (232 milhões *versus* 18,5 milhões de registros, decorrente de cota da modalidade gratuita do Databricks) e o método de medição não é equivalente (CH usa `query_log` server-pure; DBX usa wall-clock que inclui rede e fila de execução). Comparações cross-platform devem privilegiar o **padrão de aceleração** intra-plataforma, e não a magnitude bruta de cada célula.
 
-Para a análise de custos, o experimento consumiu aproximadamente quatro minutos de tempo de computação no Databricks, o que correspondeu a cerca de 0,27 DBU. A preço de tabela público do Databricks SQL Serverless (US$ 0,70 por DBU em ambiente de produção), a execução completa da medalhão e do *benchmark* custou aproximadamente vinte centavos de dólar. Esse valor é negligenciável isoladamente, mas escalando para um cenário de uso contínuo — por exemplo, oito horas por dia de uso analítico ao longo de vinte e dois dias úteis no mês — o mesmo *warehouse* 2X-Small consumiria 704 DBU mensais, equivalentes a aproximadamente quinhentos dólares por mês apenas em computação. Como referência comparável, a stack auto-hospedada deste trabalho pode ser executada em uma máquina virtual com especificações semelhantes (8 CPUs, 32 GiB de memória) por um aluguel mensal de aproximadamente trinta a cinquenta dólares em provedores como Hetzner ou Contabo, ou sem custo recorrente quando hospedada em *hardware* próprio já amortizado. A diferença de uma ordem de grandeza no custo recorrente é o *trade-off* mais tangível entre as duas abordagens.
+A diferença na magnitude observada entre os dois engines no gold (5-7× no Databricks *versus* milhares de vezes no ClickHouse) é estrutural: o Databricks Serverless 2X-Small mostrou um **piso de aproximadamente um segundo** por consulta, decorrente do custo fixo de inicialização (orquestração, despacho de tarefas, leitura de metadados em armazenamento externo); para volumes pequenos pré-agregados como os do gold (centenas de linhas), esse custo fixo domina o tempo total e impede que a redução de I/O se traduza em redução proporcional de latência. O ClickHouse, por ser embarcado em um único processo e operar sobre tabelas em armazenamento local, evita esse custo e responde em microssegundos no gold. Em termos práticos para o objetivo deste trabalho (*dashboards* interativos e análises ad-hoc), a diferença é perceptível: a *stack* auto-hospedada entrega o gold em tempo de "instantâneo", enquanto a plataforma gerenciada introduz uma latência fixa próxima de um segundo por consulta — preço razoável em cenários de escala variável e sem manutenção operacional, mas que altera a classe de uso para BI ad-hoc.
+
+Para a análise de custos, o experimento consumiu aproximadamente quatro minutos de tempo de computação no Databricks, o que correspondeu a cerca de 0,27 DBU. A preço de tabela público do Databricks SQL Serverless (US$ 0,70 por DBU em ambiente de produção), a execução completa da medalhão e do *benchmark* custou aproximadamente vinte centavos de dólar. Esse valor é negligenciável isoladamente, mas escalando para um cenário de uso contínuo — por exemplo, oito horas por dia de uso analítico ao longo de vinte e dois dias úteis no mês — o mesmo *warehouse* 2X-Small consumiria 704 DBU mensais, equivalentes a aproximadamente quinhentos dólares por mês apenas em computação. Como referência comparável, a *stack* auto-hospedada deste trabalho pode ser executada em uma máquina virtual com especificações semelhantes (8 CPUs, 32 GiB de memória) por um aluguel mensal de aproximadamente trinta a cinquenta dólares em provedores como Hetzner ou Contabo, ou sem custo recorrente quando hospedada em *hardware* próprio já amortizado. A diferença de uma ordem de grandeza no custo recorrente é o *trade-off* mais tangível entre as duas abordagens.
+
+Cabe explicitar que essa comparação foi intencionalmente concentrada no **custo de computação como primeira ordem**, não em custo total de propriedade [TCO]. Para a *stack* auto-hospedada, foram omitidos o tempo de administração da infraestrutura (sysadmin, patching, monitoramento ativo), o consumo de energia elétrica (estimado em aproximadamente 100 W em uso, equivalentes a cerca de US$ 5 a US$ 10/mês a tarifas residenciais brasileiras) e a amortização de *hardware* próprio (aproximadamente US$ 55/mês quando se assume um servidor de US$ 2.000 amortizado em 36 meses). Para o Databricks, foram omitidos os custos de armazenamento (S3 do *Unity Catalog*), egresso de rede e licenças adicionais como *Unity Catalog Premium* para governança avançada. A finalidade da comparação é orientar a ordem de grandeza esperada na decisão de arquitetura; uma análise completa de TCO requer estudo dedicado e está fora do escopo deste trabalho.
 
 <!-- FIGURA 8 — INSERIR IMAGEM AQUI
 Captura: tela do Databricks Workflows com a execução SUCCEEDED do Job "tcc-dbt-databricks-medallion".
@@ -310,7 +345,7 @@ Fonte: Resultados originais da pesquisa
 
 Fonte: Resultados originais da pesquisa
 
-A Figura 8 apresenta a execução bem-sucedida do projeto dbt como *Job* nativo do Databricks Workflows, evidenciando que o mesmo repositório versionado foi consumido pelas duas plataformas. A Figura 9 complementa essa evidência com o grafo de linhagem dos seis modelos dbt (bronze → silver → gold) gerado automaticamente pela documentação do dbt sobre o projeto Databricks, idêntico em estrutura ao do projeto ClickHouse. Sintetizando as observações experimentais com as demais dimensões pertinentes à decisão de arquitetura, a Tabela 7 organiza a comparação qualitativa entre a stack auto-hospedada deste trabalho e a plataforma Databricks gerenciada.
+A Figura 8 apresenta a execução bem-sucedida do projeto dbt como *Job* nativo do Databricks Workflows, evidenciando que o mesmo repositório versionado foi consumido pelas duas plataformas. A Figura 9 complementa essa evidência com o grafo de linhagem dos seis modelos dbt (bronze → silver → gold) gerado automaticamente pela documentação do dbt sobre o projeto Databricks, idêntico em estrutura ao do projeto ClickHouse. Sintetizando as observações experimentais com as demais dimensões pertinentes à decisão de arquitetura, a Tabela 7 organiza a comparação qualitativa entre a *stack* auto-hospedada deste trabalho e a plataforma Databricks gerenciada.
 
 *Tabela 7 — Análise comparativa qualitativa entre stack open source e plataforma Databricks*
 
@@ -336,17 +371,33 @@ A comparação evidenciou situações em que cada abordagem se mostra vantajosa.
 
 A avaliação desta pesquisa concentrou-se nos dois eixos de maior valor analítico em relação às lacunas apontadas no ciclo preliminar: indicadores quantitativos do pipeline ponta a ponta (Tabela 2), propriedades físicas das camadas materializadas (Tabela 3), o ganho mensurável da arquitetura *medallion* em duas perguntas de negócio semanticamente equivalentes (Tabelas 4 e 5) e a validação cruzada do mesmo projeto dbt em uma segunda plataforma analítica (Tabela 6). Duas frentes complementares de avaliação — escalabilidade por volume de dados com estratégias de recarga total *versus* incremental, e comportamento sob carga concorrente com diferentes níveis de *threads* — foram mapeadas na fase de planejamento como trabalho futuro, uma vez que a arquitetura *medallion* já constitui um experimento multicenário com três camadas e duas perguntas, sustentando estatisticamente a evidência principal com dez execuções cumulativas e coeficientes de variação inferiores a 20%.
 
+**Limitações e ameaças à validade**
+
+Esta seção sistematiza, segundo o quadro de Yin (2018), as principais ameaças à validade dos resultados aqui apresentados, tornando explícitas as condições sob as quais cada achado é defensável.
+
+Quanto à **validade de construto** (a medida captura o que se propõe a captar): no ClickHouse, o tempo de execução foi extraído do `query_duration_ms` do `query_log`, que é uma medida server-pure — registra apenas o tempo de processamento dentro do *engine*. No Databricks, o tempo foi coletado em wall-clock via API REST, incluindo rede e fila de execução. As duas medições não são, portanto, equivalentes para uma comparação direta de absolutos cross-platform; este trabalho privilegia a leitura do **padrão de aceleração intra-plataforma** como evidência da arquitetura *medallion* e tornou explícita essa diferença de instrumentação na nota da Tabela 6.
+
+Quanto à **validade interna** (a relação observada entre causa e efeito é robusta): a camada gold no ClickHouse opera próxima ao limite de resolução do `query_log` (1 ms), o que torna a aceleração absoluta reportada uma estimativa conservadora; o coeficiente de variação inferior a 20% nas medições principais e a ausência de correlação entre ordem da execução e tempo medido (dez execuções independentes intercaladas no tempo) reduzem a ameaça de viés de ordem ou de aquecimento residual de *cache*.
+
+Quanto à **validade externa** (os resultados generalizam): a configuração *single-node* do ClickHouse não generaliza diretamente para arquiteturas multi-nó com replicação ou *sharding*, em que coordenação e movimentação de dados introduzem fatores ausentes deste estudo; a janela de um mês adotada na validação Databricks limita a inferência sobre o comportamento dessa plataforma em volumes maiores; e o caráter de **estudo de caso único** (Yin, 2018) limita a generalização dos resultados absolutos para outros domínios de dados ou padrões de consulta — replicações em outros *datasets* e cargas estão indicadas como trabalho futuro.
+
+Quanto à **confiabilidade** (o estudo é reprodutível): o repositório Git público versiona todos os manifestos *Kubernetes*, as DAGs Airflow, os dois projetos dbt (ClickHouse e Databricks) e os documentos do TCC; as Tabelas 1 e 1b documentam *hardware* e versões dos componentes; o JSON com cada amostra bruta de tempo do *benchmark* Databricks está em `tcc/evidencias/`; e o histórico cumulativo do *benchmark* ClickHouse é persistido em `benchmark.medallion_results` no próprio *engine*, com `run_id` e `captured_at` por execução.
+
 ---
 
 ## Conclusão
 
-Os resultados apresentados demonstraram a viabilidade técnica e o desempenho competitivo de uma stack moderna de engenharia de dados construída exclusivamente com tecnologias *open source*. A escolha do K3s em configuração *single-node* mostrou-se eficiente para a Prova de Conceito, otimizando o uso de recursos e simplificando a gestão do ambiente. A adoção do Argo CD para o *deploy* da infraestrutura e a sincronização automática de manifestos, DAGs e modelos dbt reforçaram as práticas de *GitOps*, garantindo automação, consistência e reprodutibilidade.
+Os resultados apresentados demonstraram a viabilidade técnica e o desempenho competitivo de uma *stack* moderna de engenharia de dados construída exclusivamente com tecnologias *open source*. A escolha do K3s em configuração *single-node* mostrou-se eficiente para a Prova de Conceito, otimizando o uso de recursos e simplificando a gestão do ambiente. A adoção do Argo CD para o *deploy* da infraestrutura e a sincronização automática de manifestos, DAGs e modelos dbt reforçaram as práticas de *GitOps*, garantindo automação, consistência e reprodutibilidade.
 
-A implementação completa do projeto dbt segundo a arquitetura *medallion* consolidou a stack como uma plataforma analítica madura, capaz de processar dados reais em escala da ordem de centenas de milhões de registros com governança, testes automatizados e documentação rastreável. A integração nativa com Airflow via *Astronomer Cosmos* ofereceu visibilidade ponta a ponta do pipeline, *retries* granulares e *lineage* visual diretamente no grafo da DAG.
+A implementação completa do projeto dbt segundo a arquitetura *medallion* consolidou a *stack* como uma plataforma analítica madura, capaz de processar dados reais em escala da ordem de centenas de milhões de registros com governança, testes automatizados e documentação rastreável. A integração nativa com Airflow via *Astronomer Cosmos* ofereceu visibilidade ponta a ponta do pipeline, *retries* granulares e *lineage* visual diretamente no grafo da DAG.
 
 Os indicadores quantitativos coletados via *benchmark* evidenciaram o ganho mensurável da arquitetura *medallion*, com consultas na camada gold executando em ordens de grandeza menos tempo do que sobre a camada bronze em ambas as perguntas avaliadas, corroborando empiricamente a recomendação da arquitetura *multi-hop* para *lakehouses* analíticos. A análise comparativa com a plataforma Databricks, sustentada pela reexecução experimental do mesmo projeto dbt e do *benchmark* nas duas plataformas (Tabela 6), forneceu subsídios objetivos para decisões de arquitetura entre soluções auto-hospedadas e gerenciadas: o padrão de melhoria entre camadas se preservou em ambos os ambientes, embora a magnitude absoluta dos tempos no gold tenha diferido em duas a três ordens de grandeza (microssegundos a milissegundos no ClickHouse *versus* aproximadamente um segundo no Databricks Serverless) e o custo recorrente estimado tenha diferido em cerca de uma ordem de grandeza, o que orienta a escolha conforme a prioridade do caso de uso (*time-to-value* gerenciado *versus* custo previsível e tempo de resposta interativo).
 
-A combinação entre uma infraestrutura *cloud-native* leve, gerenciamento *GitOps*, orquestração robusta, armazenamento compatível com S3, processamento analítico de alto desempenho e transformações governadas resultou em uma arquitetura pronta para uso em projetos reais de engenharia de dados, validando o objetivo central do trabalho.
+Cabe registrar, em caráter de reflexão crítica, que algumas decisões tomadas durante a pesquisa poderiam ser revisitadas em iterações futuras: a manutenção do codec padrão LZ4 do ClickHouse — escolhido por privilegiar velocidade de descompressão — implicou taxa de compressão moderada (cerca de duas a três vezes), e a investigação de codecs alternativos como ZSTD ofereceria balanço diferente entre uso de disco e custo de descompressão; a ausência de um cenário com janela de dados maior na plataforma Databricks limitou a inferência sobre o comportamento dessa plataforma em escala de produção; e a comparação cross-platform foi conduzida com métodos de medição não-equivalentes (`query_log` *versus* wall-clock), o que motivou a escolha por privilegiar o padrão de aceleração intra-plataforma como evidência principal. Estas escolhas refletem o caráter de **estudo de caso aplicado** desta pesquisa: o trabalho apresenta uma fotografia consistente e reprodutível de uma estratégia possível, sem pretensão de servir como veredito sobre arquiteturas ou plataformas de uso geral.
+
+Como **trabalho futuro**, identificam-se quatro frentes de extensão direta da pesquisa: (i) replicação multi-nó do ClickHouse com avaliação dos custos de coordenação inerentes ao *sharding* nativo, comparando-os ao ganho de paralelismo; (ii) avaliação de pipelines em modo *streaming* ou *Change Data Capture* via *Materialized Views* ou *ClickHouse Kafka engine*, para casos de uso *near real-time*; (iii) integração de governança e linhagem cross-platform por meio de catálogos ativos como *DataHub* ou *OpenMetadata*, complementando o *lineage* embutido do dbt com metadados de fontes externas; e (iv) replicação do mesmo *benchmark medallion* sobre outros domínios de dados (logs de aplicação, séries temporais industriais) com o objetivo de validar a generalização dos resultados aqui apresentados para padrões de consulta diferentes.
+
+A combinação entre uma infraestrutura *cloud-native* leve, gerenciamento *GitOps*, orquestração robusta, armazenamento compatível com S3, processamento analítico de alto desempenho e transformações governadas resultou em uma arquitetura pronta para uso em projetos reais de engenharia de dados de pequeno e médio porte, validando o objetivo central do trabalho.
 
 ---
 
