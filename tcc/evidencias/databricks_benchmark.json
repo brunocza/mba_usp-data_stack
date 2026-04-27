@@ -1,0 +1,218 @@
+{
+  "engine": "Databricks Serverless SQL Warehouse 2X-Small",
+  "warehouse_id": "71a0da489e8c626f",
+  "host": "dbc-e75b40a2-6554.cloud.databricks.com",
+  "dataset": "fhvhv_tripdata_2023-01.parquet (18,479,031 rows)",
+  "warmups": 2,
+  "measurements": 5,
+  "started_utc": "2026-04-27T20:17:05.355101Z",
+  "finished_utc": "2026-04-27T20:19:35.895217Z",
+  "queries": {
+    "Q1_daily_revenue_2023": {
+      "bronze": {
+        "samples": [
+          {
+            "statement_id": "01f14276-17f1-1e5e-8be3-75ed73494205",
+            "client_wall_ms": 6399.922847747803,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-1bc5-18df-bbe1-855cfdadc648",
+            "client_wall_ms": 6020.689964294434,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-1f5b-10d0-bf6e-df7e7a8243d8",
+            "client_wall_ms": 5876.479625701904,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-22db-1206-a13d-a44b75a4dfb6",
+            "client_wall_ms": 6031.076431274414,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-2674-12b2-bcd9-4e9ea02ff4af",
+            "client_wall_ms": 5876.368999481201,
+            "rows_returned": 31
+          }
+        ],
+        "mean_ms": 6040.907573699951,
+        "median_ms": 6020.689964294434,
+        "stdev_ms": 214.18850493193298,
+        "cv_pct": 3.5456345312157493
+      },
+      "silver": {
+        "samples": [
+          {
+            "statement_id": "01f14276-2bc8-105d-8501-27b49c00cecf",
+            "client_wall_ms": 1156.1782360076904,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-2c76-191a-9f16-11ac7288ff65",
+            "client_wall_ms": 1151.3195037841797,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-2d27-126a-940b-39b0512ce5bf",
+            "client_wall_ms": 1227.6813983917236,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-2de2-1ba4-b9c8-2c27ce2c0b5b",
+            "client_wall_ms": 1216.390609741211,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-2e9a-1a70-a50b-8f7a32d97d5e",
+            "client_wall_ms": 1073.875904083252,
+            "rows_returned": 31
+          }
+        ],
+        "mean_ms": 1165.0891304016113,
+        "median_ms": 1156.1782360076904,
+        "stdev_ms": 61.51929190519171,
+        "cv_pct": 5.280221941817081
+      },
+      "gold": {
+        "samples": [
+          {
+            "statement_id": "01f14276-3111-156f-8ed3-0174b3fd0867",
+            "client_wall_ms": 1260.7536315917969,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-31cf-1d13-9dff-d43a6c7a3aff",
+            "client_wall_ms": 1112.581491470337,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-3279-18e5-acd1-e6264ed6c48c",
+            "client_wall_ms": 1157.0460796356201,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-332b-14ae-afaf-ae63ec7a6530",
+            "client_wall_ms": 1224.4300842285156,
+            "rows_returned": 31
+          },
+          {
+            "statement_id": "01f14276-33e4-1c20-83c4-60a686ac6454",
+            "client_wall_ms": 1138.4260654449463,
+            "rows_returned": 31
+          }
+        ],
+        "mean_ms": 1178.6474704742432,
+        "median_ms": 1157.0460796356201,
+        "stdev_ms": 61.819423537576085,
+        "cv_pct": 5.244946015342678
+      },
+      "speedup_gold_over_bronze": 5.125287861746582,
+      "speedup_silver_over_bronze": 5.184931706999639
+    },
+    "Q2_top_borough_pairs_by_revenue": {
+      "bronze": {
+        "samples": [
+          {
+            "statement_id": "01f14276-3efa-1bd0-8613-fd5034997abe",
+            "client_wall_ms": 7581.654787063599,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-437d-12a7-92c3-998508b58f2e",
+            "client_wall_ms": 7560.157775878906,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-47ff-1ee7-afdb-323e7c379781",
+            "client_wall_ms": 7759.321689605713,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-4cae-1533-9d00-672959fb7227",
+            "client_wall_ms": 7998.99959564209,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-5163-1ace-bdfa-b1829b56b996",
+            "client_wall_ms": 7805.44114112854,
+            "rows_returned": 10
+          }
+        ],
+        "mean_ms": 7741.1149978637695,
+        "median_ms": 7759.321689605713,
+        "stdev_ms": 179.68505580578065,
+        "cv_pct": 2.321177967971879
+      },
+      "silver": {
+        "samples": [
+          {
+            "statement_id": "01f14276-5a34-1538-a949-3f11ab0f9e78",
+            "client_wall_ms": 4083.2486152648926,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-5ca4-193c-92fc-c199babd9bcc",
+            "client_wall_ms": 3664.0238761901855,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-5ed0-17b0-8ff4-89d5ac1484c0",
+            "client_wall_ms": 3183.81404876709,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-60b8-14be-8422-f116dbfa3578",
+            "client_wall_ms": 2854.7847270965576,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-626c-1d1e-aee3-04b9bd69a675",
+            "client_wall_ms": 2836.6875648498535,
+            "rows_returned": 10
+          }
+        ],
+        "mean_ms": 3324.511766433716,
+        "median_ms": 3183.81404876709,
+        "stdev_ms": 540.6851832021882,
+        "cv_pct": 16.263596617743193
+      },
+      "gold": {
+        "samples": [
+          {
+            "statement_id": "01f14276-6603-1573-8373-4e8f982c8559",
+            "client_wall_ms": 1117.0322895050049,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-66ac-147f-9179-1bb932940e70",
+            "client_wall_ms": 1075.6895542144775,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-6750-1fcb-ad16-fb1e024bb7c5",
+            "client_wall_ms": 1077.4426460266113,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-67f7-1185-b92d-c6a1891a0362",
+            "client_wall_ms": 1092.108964920044,
+            "rows_returned": 10
+          },
+          {
+            "statement_id": "01f14276-689b-18da-ad3e-577da8d34629",
+            "client_wall_ms": 1082.5471878051758,
+            "rows_returned": 10
+          }
+        ],
+        "mean_ms": 1088.9641284942627,
+        "median_ms": 1082.5471878051758,
+        "stdev_ms": 16.939950317511702,
+        "cv_pct": 1.555602234660841
+      },
+      "speedup_gold_over_bronze": 7.108696049122939,
+      "speedup_silver_over_bronze": 2.3284967964387295
+    }
+  }
+}
