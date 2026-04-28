@@ -118,16 +118,7 @@ O Argo CD, ferramenta declarativa de *GitOps* para entrega contínua sobre Kuber
 
 <img width="2159" height="1736" alt="image" src="https://github.com/user-attachments/assets/53ceeda9-7adc-4510-9eec-98aefdd64491" />
 
-
-<!-- FIGURA 1 — INSERIR IMAGEM AQUI
-Captura: tela de Applications do Argo CD mostrando o conjunto de aplicações gerenciadas pelo padrão App-of-Apps — root-app, airflow10, clickhouse, grafana, metabase, minio-operator, minio-tenant, prometheus — todas com status Healthy.
-Onde capturar: Argo CD UI (https://argocd.bxdatalab.com ou equivalente) > Applications > modo de visualização em grade (Tiles) ou lista, após "Refresh All".
-O que destacar: todas as aplicações com indicador de saúde verde (Healthy). Ideal capturar após um Sync bem-sucedido da root-app para mostrar também o status Synced; se estiver Unknown, pode ser deixado assim com justificativa no próprio texto (o importante é o Healthy).
-Formato: PNG, tela cheia ou recorte limpo do painel de Applications. -->
-
 *Figura 1 — Aplicações do cluster no Argo CD sob o padrão App-of-Apps*
-
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: captura da aba Applications do Argo CD mostrando as oito aplicações — root-app, airflow10, clickhouse, grafana, metabase, minio-operator, minio-tenant e prometheus — todas com o indicador de saúde verde (Healthy) e status Synced, visualizadas em modo grade ou lista após "Refresh All".)**
 
 Fonte: Resultados originais da pesquisa
 
@@ -136,15 +127,8 @@ Fonte: Resultados originais da pesquisa
 O pipeline foi implementado como uma única DAG Airflow nomeada `fhvhv_pipeline`, composta pelas *tasks* `create_schemas`, `ingest_bronze_trips`, `ingest_bronze_zones`, `dbt_transform` e `optimize_tables`, executadas sequencialmente. A *task* `create_schemas` cria os bancos `bronze`, `silver` e `gold` no ClickHouse. A *task* `ingest_bronze_trips` ingere os 12 *Parquets* do MinIO no `bronze.fhvhv_trips`, processando um mês por vez para respeitar o limite de memória do ClickHouse. A *task* `ingest_bronze_zones` carrega o CSV de zonas em `bronze.taxi_zones`. A *task* `dbt_transform`, gerada automaticamente pelo *Astronomer Cosmos*, executa cada modelo dbt como uma *task* Airflow nativa. Por fim, `optimize_tables` aplica `OPTIMIZE TABLE FINAL` em todas as tabelas materializadas, consolidando partes do *MergeTree* e reciclando espaço em disco.
 
 <img width="1940" height="1204" alt="fhvhv_pipeline-graph" src="https://github.com/user-attachments/assets/d32c14c6-b080-44c4-ac21-988a8d006850" />
-<!-- FIGURA 2 — INSERIR IMAGEM AQUI
-Captura: grafo da DAG `fhvhv_pipeline` no Airflow UI, mostrando o encadeamento das tasks: create_schemas → [ingest_bronze_trips, ingest_bronze_zones] → dbt_transform (grupo expandido com os modelos silver e gold do Cosmos) → optimize_tables.
-Onde capturar: Airflow UI > DAGs > fhvhv_pipeline > aba "Graph" em uma execução recente de sucesso. Se o grupo `dbt_transform` vier colapsado, clicar para expandir e mostrar os nós dos modelos dbt.
-O que destacar: a integração nativa entre Airflow e dbt via Cosmos — cada modelo dbt aparece como uma task Airflow, com pares `.run` e `.test` por modelo. Evidencia a governança ponta a ponta e a rastreabilidade visual do pipeline.
-Formato: PNG horizontal, recorte ajustado ao grafo (sem a barra lateral). -->
 
 *Figura 2 — Grafo da DAG fhvhv_pipeline no Airflow com integração dbt via Cosmos*
-
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: grafo visual da DAG `fhvhv_pipeline` no Airflow UI em uma execução recente de sucesso, mostrando o encadeamento create_schemas → ingest_bronze_trips e ingest_bronze_zones em paralelo → grupo dbt_transform expandido com os nós `.run` e `.test` dos modelos silver e gold do Cosmos → optimize_tables, todos com borda verde de success.)**
 
 Fonte: Resultados originais da pesquisa
 
@@ -156,29 +140,13 @@ Cada modelo possui testes de qualidade declarados no arquivo `schema.yml`, com v
 
 <img width="2136" height="1717" alt="image" src="https://github.com/user-attachments/assets/6bc53606-9acc-4c95-a02e-fe3ff6d4fbeb" />
 
-<!-- FIGURA 3 — INSERIR IMAGEM AQUI
-Captura: grafo de linhagem (lineage) gerado pelo `dbt docs generate`, mostrando o fluxo bronze.fhvhv_trips → silver.fhvhv_trips_clean → silver.fhvhv_trips_enriched → (5 modelos gold), com setas de dependência.
-Onde capturar: navegador em `https://dbt-docs.bxdatalab.com/#!/overview` (ou endereço local do dbt docs do projeto) > botão "View Lineage Graph" no canto inferior direito.
-O que destacar: os dois níveis de transformação (silver e gold) e as dependências cruzadas via taxi_zones. Evidencia a governança e a rastreabilidade declarativa do projeto dbt.
-Formato: PNG, cores padrão do dbt docs, proporção retangular horizontal. -->
-
 *Figura 3 — Grafo de linhagem dos modelos dbt (bronze → silver → gold)*
-
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: grafo de lineage gerado pelo `dbt docs generate`, exibindo os nove nós do projeto e suas dependências: as duas *sources* bronze (`bronze.fhvhv_trips` e `bronze.taxi_zones`) alimentam os dois modelos silver — `fhvhv_trips_clean` recebe diretamente de `bronze.fhvhv_trips`, e `fhvhv_trips_enriched` resulta do *join* entre `fhvhv_trips_clean` e `bronze.taxi_zones`. Quatro modelos gold (`daily_revenue`, `hourly_demand`, `driver_economics`, `shared_vs_solo`) derivam diretamente de `fhvhv_trips_clean`, enquanto `borough_pairs` deriva de `fhvhv_trips_enriched` por necessitar dos nomes de *borough*. As setas de dependência e as cores padrão do dbt docs evidenciam a estrutura medalhão preservada de ponta a ponta.)**
 
 Fonte: Resultados originais da pesquisa
 
 <img width="2145" height="1295" alt="image" src="https://github.com/user-attachments/assets/2b7df7d4-2788-4ab4-b591-f633d96f6f2b" />
 
-<!-- FIGURA 4 — INSERIR IMAGEM AQUI
-Captura: saída do comando `dbt test` mostrando todas as asserções aprovadas (not_null, unique, relationships), preferencialmente pelos logs da task dbt_test do Airflow ou por terminal com a execução local do dbt.
-Onde capturar: (a) Airflow UI > DAGs > fhvhv_pipeline > task `dbt_test` > Logs, ou (b) terminal rodando `dbt test --project-dir dbt/` com todos PASS em verde.
-O que destacar: o bloco final com "Done. PASS=N ERROR=0 FAIL=0 ...". Prova que os modelos silver e gold passam nos testes de qualidade declarados no schema.yml.
-Formato: PNG do texto do log, recorte focado no bloco de sumário dos testes. -->
-
 *Figura 4 — Execução dos testes dbt com aprovação total das asserções de qualidade*
-
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: bloco de saída textual do comando `dbt test` ao final da execução, mostrando as linhas de cada asserção `PASS`, seguidas do sumário final no formato "Done. PASS=N WARN=0 ERROR=0 SKIP=0 TOTAL=N", comprovando que todos os testes de qualidade declarados no `schema.yml` dos modelos silver e gold foram aprovados.)**
 
 Fonte: Resultados originais da pesquisa
 
@@ -285,19 +253,13 @@ Fonte: Resultados originais da pesquisa. ¹ Estimativa conservadora limitada pel
 
 Fonte: Resultados originais da pesquisa. ¹ Estimativa conservadora limitada pela resolução do `query_log` do ClickHouse (1 ms); ver discussão a seguir.
 
-O salto de desempenho entre bronze e gold ultrapassou três ordens de grandeza em ambas as perguntas. A diferença é explicada por três fatores complementares: o *scan* do *engine*, em que bronze e silver leram centenas de milhões de linhas enquanto gold acessou tabelas pré-agregadas com poucas centenas ou poucas dezenas de linhas; o volume de I/O, que caiu de 14 a 18 GiB no bronze para menos de 10 KiB no gold; e a ausência de operações por linha no gold, uma vez que agregações, conversões de tipo e *joins* já foram executadas durante a carga. O resultado validou empiricamente a arquitetura *medallion*: a camada gold materializada pelo dbt transformou consultas analíticas da ordem de dezenas de segundos para a ordem de milissegundos, viabilizando *dashboards* interativos e análises ad-hoc sobre o mesmo conjunto de dados bruto. A *task* `report_history` da DAG computa média, desvio-padrão e coeficiente de variação sobre todo o histórico persistido, permitindo avaliar a consistência *cross-run* das medições conforme novas execuções são acumuladas.
+O salto de desempenho entre bronze e gold ultrapassou três ordens de grandeza em ambas as perguntas. A diferença é explicada por três fatores complementares: o *scan* do *engine*, em que bronze e silver leram centenas de milhões de linhas enquanto gold acessou tabelas pré-agregadas com poucas centenas ou poucas dezenas de linhas; o volume de I/O, que caiu de 14 a 18 GiB no bronze para menos de 10 KiB no gold; e a ausência de operações por linha no gold, uma vez que agregações, conversões de tipo e *joins* já foram executadas durante a carga. O resultado validou empiricamente a arquitetura *medallion*: a camada gold materializada pelo dbt transformou consultas analíticas da ordem de dezenas de segundos para a ordem de milissegundos, viabilizando *dashboards* interativos e análises ad-hoc sobre o mesmo conjunto de dados bruto. A *task* `report_history` da DAG computa média, desvio-padrão e coeficiente de variação por iteração e também agregados sobre todo o histórico persistido, permitindo avaliar tanto a consistência *intra-run* (dentro de cada execução, geralmente abaixo de 20% nas camadas bronze e silver) quanto a variabilidade *cross-run* (entre execuções, naturalmente mais elevada por incorporar o estado do sistema hospedeiro entre execuções e, na camada gold, a resolução de 1 ms do instrumento de medição).
 
 Cabe um caveat de instrumentação relevante para a interpretação das Tabelas 4 e 5. A camada gold opera próxima ao limite de resolução do `query_duration_ms` reportado pelo `query_log` do ClickHouse (1 ms). Os tempos médios da camada gold (4,2 ms em Q1 e 12,4 ms em Q2) estão a poucas unidades acima desse piso, o que torna a *razão exata* da aceleração sensível à granularidade do instrumento. Os números reportados (≈6.266× em Q1 e ≈4.237× em Q2) devem, portanto, ser lidos como **estimativas conservadoras** indicando ganho **de pelo menos** três ordens de grandeza, sem que a magnitude precisa possa ser inferida com a resolução disponível. A interpretação prática mantém-se intacta: a diferença é grande o suficiente para alterar a classe de uso das consultas analíticas (de *batch* para interativo), o que é justamente o objetivo da camada gold materializada.
 
-<!-- FIGURA 7 — INSERIR IMAGEM AQUI
-Captura: saída do log da task `consolidate_results` ou `report_history` da DAG benchmark_medallion, mostrando a tabela formatada com as três camadas lado a lado, a aceleração calculada e, idealmente, o bloco de estatística cross-run com CV%.
-Onde capturar: Airflow UI > DAGs > benchmark_medallion > última execução > task consolidate_results (ou report_history) > Logs.
-O que destacar: as linhas mostrando engine_avg_ms por camada, a aceleração numérica (Q1 ≈6.266× e Q2 ≈4.237×) e, se o print incluir, a coluna CV% demonstrando consistência <20% nas medições. Pode-se alternativamente capturar o grafo da DAG `benchmark_medallion` com as sete tasks em verde, evidenciando a orquestração da metodologia.
-Formato: PNG do bloco de texto tabular, sem crop excessivo. -->
+<img width="2134" height="1729" alt="image" src="https://github.com/user-attachments/assets/c9f8c6bb-f0ec-4803-a03b-50966363b17d" />
 
-*Figura 7 — Relatório consolidado do benchmark medallion com aceleração por camada e consistência cross-run*
-
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: saída textual tabular da task `consolidate_results` ou `report_history` da DAG benchmark_medallion, mostrando as três camadas bronze, silver e gold lado a lado com as colunas engine_avg, read_bytes e aceleração, numericamente evidenciando o ganho de aproximadamente seis mil vezes para Q1 e quatro mil vezes para Q2, e — se visível no print — o bloco cross-run com coeficiente de variação inferior a vinte por cento por camada.)**
+*Figura 7 — Relatório consolidado do benchmark medallion com aceleração por camada e estatísticas cross-run*
 
 Fonte: Resultados originais da pesquisa
 
@@ -328,20 +290,15 @@ Para a análise de custos, o experimento consumiu aproximadamente quatro minutos
 
 Cabe explicitar que essa comparação foi intencionalmente concentrada no **custo de computação como primeira ordem**, não em custo total de propriedade [TCO]. Para a *stack* auto-hospedada, foram omitidos o tempo de administração da infraestrutura (sysadmin, patching, monitoramento ativo), o consumo de energia elétrica (estimado em aproximadamente 100 W em uso, equivalentes a cerca de US$ 5 a US$ 10/mês a tarifas residenciais brasileiras) e a amortização de *hardware* próprio (aproximadamente US$ 55/mês quando se assume um servidor de US$ 2.000 amortizado em 36 meses). Para o Databricks, foram omitidos os custos de armazenamento (S3 do *Unity Catalog*), egresso de rede e licenças adicionais como *Unity Catalog Premium* para governança avançada. A finalidade da comparação é orientar a ordem de grandeza esperada na decisão de arquitetura; uma análise completa de TCO requer estudo dedicado e está fora do escopo deste trabalho.
 
-<!-- FIGURA 8 — INSERIR IMAGEM AQUI
-Captura: tela do Databricks Workflows com a execução SUCCEEDED do Job "tcc-dbt-databricks-medallion".
-Onde capturar: Databricks UI > Jobs & Pipelines > tcc-dbt-databricks-medallion > última execução SUCCEEDED.
-O que destacar: status "Succeeded" no topo, output textual do dbt mostrando os seis modelos buildados em ordem (bronze.fhvhv_trips, bronze.taxi_zones, silver.fhvhv_trips_clean, silver.fhvhv_trips_enriched, gold.daily_revenue, gold.borough_pairs) com PASS=6 ERROR=0, e o painel lateral evidenciando origem do código (Git URL, branch main, commit hash), runtime serverless (SQL Warehouse 2X-Small), duração total e linhagem de tabelas detectada. Evidencia que o mesmo projeto dbt do repositório foi orquestrado nativamente pelo Databricks Workflows com idêntica estrutura de modelos. -->
+<img width="2138" height="1681" alt="image" src="https://github.com/user-attachments/assets/6caca360-3915-4498-8af9-2c14fccd4bc8" />
 
-*Figura 8 — Execução SUCCEEDED do projeto dbt como Job nativo do Databricks Workflows*
-
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: tela "dbt_build run Succeeded" do Databricks Workflows, com o output textual do dbt listando os seis modelos buildados nas três camadas em ordem cronológica e o painel lateral exibindo Git URL, commit hash, *Serverless Starter Warehouse* 2X-Small e duração total de aproximadamente 2m42s, evidenciando que o mesmo projeto dbt do repositório foi executado pelo Databricks Workflows.)**
+*Figura 8 — Execução bem-sucedida do projeto dbt como Job nativo do Databricks Workflows*
 
 Fonte: Resultados originais da pesquisa
 
-*Figura 9 — Grafo de linhagem do projeto dbt no Databricks (bronze → silver → gold)*
+<img width="2109" height="1360" alt="image" src="https://github.com/user-attachments/assets/66e56fe3-ef23-4e04-8b61-67bb3cc53666" />
 
-**(DESCRITIVO — APAGAR APÓS INSERIR IMAGEM: grafo de linhagem renderizado pela documentação automática do dbt (`dbt docs`) sobre o projeto Databricks, exibindo os seis modelos como nós conectados — bronze.fhvhv_trips e bronze.taxi_zones na esquerda, silver.fhvhv_trips_clean e silver.fhvhv_trips_enriched no meio, e gold.daily_revenue e gold.borough_pairs à direita —, evidenciando que a estrutura medalhão preservada após a troca de *adapter* é idêntica à do projeto ClickHouse e que a linhagem é gerada automaticamente a partir dos `ref()` dos modelos.)**
+*Figura 9 — Grafo de linhagem do projeto dbt no Databricks (bronze → silver → gold)*
 
 Fonte: Resultados originais da pesquisa
 
@@ -369,7 +326,7 @@ A comparação evidenciou situações em que cada abordagem se mostra vantajosa.
 
 **Delimitação do escopo experimental**
 
-A avaliação desta pesquisa concentrou-se nos dois eixos de maior valor analítico em relação às lacunas apontadas no ciclo preliminar: indicadores quantitativos do pipeline ponta a ponta (Tabela 2), propriedades físicas das camadas materializadas (Tabela 3), o ganho mensurável da arquitetura *medallion* em duas perguntas de negócio semanticamente equivalentes (Tabelas 4 e 5) e a validação cruzada do mesmo projeto dbt em uma segunda plataforma analítica (Tabela 6). Duas frentes complementares de avaliação — escalabilidade por volume de dados com estratégias de recarga total *versus* incremental, e comportamento sob carga concorrente com diferentes níveis de *threads* — foram mapeadas na fase de planejamento como trabalho futuro, uma vez que a arquitetura *medallion* já constitui um experimento multicenário com três camadas e duas perguntas, sustentando estatisticamente a evidência principal com dez execuções cumulativas e coeficientes de variação inferiores a 20%.
+A avaliação desta pesquisa concentrou-se nos dois eixos de maior valor analítico em relação às lacunas apontadas no ciclo preliminar: indicadores quantitativos do pipeline ponta a ponta (Tabela 2), propriedades físicas das camadas materializadas (Tabela 3), o ganho mensurável da arquitetura *medallion* em duas perguntas de negócio semanticamente equivalentes (Tabelas 4 e 5) e a validação cruzada do mesmo projeto dbt em uma segunda plataforma analítica (Tabela 6). Duas frentes complementares de avaliação — escalabilidade por volume de dados com estratégias de recarga total *versus* incremental, e comportamento sob carga concorrente com diferentes níveis de *threads* — foram mapeadas na fase de planejamento como trabalho futuro, uma vez que a arquitetura *medallion* já constitui um experimento multicenário com três camadas e duas perguntas, sustentando estatisticamente a evidência principal com mais de dez execuções cumulativas e coeficientes de variação **por iteração (intra-run)** inferiores a 20% nas camadas bronze e silver, indicando consistência das medições dentro de cada execução; a variabilidade *cross-run* — agregada sobre todas as execuções — é naturalmente mais elevada por refletir o estado do sistema operacional hospedeiro entre execuções e, na camada gold, a resolução de 1 ms do `query_log` discutida anteriormente.
 
 **Limitações e ameaças à validade**
 
@@ -377,7 +334,7 @@ Esta seção sistematiza, segundo o quadro de Yin (2018), as principais ameaças
 
 Quanto à **validade de construto** (a medida captura o que se propõe a captar): no ClickHouse, o tempo de execução foi extraído do `query_duration_ms` do `query_log`, que é uma medida server-pure — registra apenas o tempo de processamento dentro do *engine*. No Databricks, o tempo foi coletado em wall-clock via API REST, incluindo rede e fila de execução. As duas medições não são, portanto, equivalentes para uma comparação direta de absolutos cross-platform; este trabalho privilegia a leitura do **padrão de aceleração intra-plataforma** como evidência da arquitetura *medallion* e tornou explícita essa diferença de instrumentação na nota da Tabela 6.
 
-Quanto à **validade interna** (a relação observada entre causa e efeito é robusta): a camada gold no ClickHouse opera próxima ao limite de resolução do `query_log` (1 ms), o que torna a aceleração absoluta reportada uma estimativa conservadora; o coeficiente de variação inferior a 20% nas medições principais e a ausência de correlação entre ordem da execução e tempo medido (dez execuções independentes intercaladas no tempo) reduzem a ameaça de viés de ordem ou de aquecimento residual de *cache*.
+Quanto à **validade interna** (a relação observada entre causa e efeito é robusta): a camada gold no ClickHouse opera próxima ao limite de resolução do `query_log` (1 ms), o que torna a aceleração absoluta reportada uma estimativa conservadora; o coeficiente de variação **por iteração (intra-run)** inferior a 20% nas camadas bronze e silver e a ausência de correlação entre ordem da execução e tempo medido (mais de dez execuções independentes intercaladas no tempo) reduzem a ameaça de viés de ordem ou de aquecimento residual de *cache*. A variabilidade *cross-run* (agregada entre execuções) é naturalmente mais elevada e reportada na seção de Resultados por meio do *report_history* (Figura 7), refletindo a carga ambiental do sistema hospedeiro e, na camada gold, a granularidade do instrumento de medição.
 
 Quanto à **validade externa** (os resultados generalizam): a configuração *single-node* do ClickHouse não generaliza diretamente para arquiteturas multi-nó com replicação ou *sharding*, em que coordenação e movimentação de dados introduzem fatores ausentes deste estudo; a janela de um mês adotada na validação Databricks limita a inferência sobre o comportamento dessa plataforma em volumes maiores; e o caráter de **estudo de caso único** (Yin, 2018) limita a generalização dos resultados absolutos para outros domínios de dados ou padrões de consulta — replicações em outros *datasets* e cargas estão indicadas como trabalho futuro.
 
