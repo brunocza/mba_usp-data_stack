@@ -1,27 +1,4 @@
-<!--
-═══════════════════════════════════════════════════════════════════════════════
-TCC FINAL — Bruno Czarnescki — MBA USP/Esalq
-═══════════════════════════════════════════════════════════════════════════════
-Versão estruturada conforme Template TCC_PT.docx (USP/Esalq).
-Estrutura obrigatória (ordem fixa, sem numeração nos títulos):
-  Resumo → Introdução → Material e Métodos → Resultados e Discussão →
-  Conclusão → Referências
-Limite: 30 páginas (Arial 11, 1,5 espaço, margens 2,5 cm).
 
-Notas para conversão MANUAL para .docx no template oficial USP:
-- Substituir HEADER abaixo pelo cabeçalho do template (logo MBA + nome do curso).
-- Subtópicos marcados com `**Negrito**` neste markdown devem virar parágrafos
-  com a primeira linha recuada 1,25 cm e em negrito (não usar nível ###).
-- Tabelas: título ACIMA, fonte ABAIXO, fonte Arial 11, espaçamento simples,
-  sem cores, sem negrito interno, sem bordas decorativas.
-- Figuras: título e fonte ABAIXO da imagem, fonte Arial 11.
-- Itálico em termos estrangeiros (exceto latim, que vai em itálico também).
-- Os blocos `<!-- FIGURA N — INSERIR IMAGEM AQUI ... --!>` indicam o local
-  exato onde inserir cada captura de tela no .docx, com o alvo do print
-  descrito dentro do próprio comentário. Remover o bloco HTML após inserir
-  a imagem correspondente.
-═══════════════════════════════════════════════════════════════════════════════
--->
 
 # Avaliação de metodologias e técnicas para implementação de uma *stack* moderna de dados *open source*
 
