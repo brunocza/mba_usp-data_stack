@@ -84,7 +84,7 @@ O tráfego do navegador jamais toca diretamente o cluster: ele passa pela edge d
 |---|---|---|---|
 | **Virtualização** | Proxmox VE + Terraform (`Telmate/proxmox`) | 3.0.1-rc1 | Provisiona a VM Ubuntu 22.04 a partir de um template cloud-init |
 | **Orquestração de containers** | k3s | v1.32.5+k3s1 | Distribuição leve de Kubernetes (single-node, control-plane no próprio nó) |
-| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs de um pool reservado da LAN (192.168.18.21–58, **pinados por chart**) para Services `LoadBalancer` |
+| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs de um pool reservado da LAN (faixa configurável em `ipAddressPool`, **pinados por chart**) para Services `LoadBalancer` |
 | **GitOps** | Argo CD | latest | Reconcilia continuamente o estado do cluster com este repositório |
 | **Tunnel** | Cloudflare Tunnel (`cloudflared`) | latest | Exposição pública sem porta aberta; políticas de Access (Zero Trust + OTP) configuráveis por *application* no painel |
 | **Orquestração de workflows** | Apache Airflow | 3.1.8 (chart 1.20.0) | DAGs sincronizadas via git-sync, executor Celery + Redis; imagem custom `bx-airflow:3.1.8-cosmos1.14.0` |
@@ -103,16 +103,16 @@ O tráfego do navegador jamais toca diretamente o cluster: ele passa pela edge d
 
 Todas servidas sob `*.bxdatalab.com` via Cloudflare Tunnel. Cloudflare Zero Trust Access pode ser anexado por *application* no painel (regra usual: `Emails ending in @usp.br` + IdP "One-time PIN"); essa camada é configurável por hostname e não depende de mudança no cluster.
 
-| Aplicação | URL | LAN |
+| Aplicação | URL | Protegido por Access? |
 |---|---|---|
-| Airflow | `https://airflow.bxdatalab.com` | `http://192.168.18.31:8080` |
-| Grafana | `https://grafana.bxdatalab.com` | `http://192.168.18.23` |
-| Argo CD | `https://argocd.bxdatalab.com` | `http://192.168.18.28` |
-| MinIO Console | `https://minio.bxdatalab.com` | `http://192.168.18.22:9090` |
-| MinIO S3 API | `https://s3.bxdatalab.com` | `http://192.168.18.24` |
-| dbt docs | `https://dbt-docs.bxdatalab.com` | `http://192.168.18.31:8081` (*sidecar* do `airflow10-api-server`) |
+| Airflow | `https://airflow.bxdatalab.com` | Configurável |
+| Grafana | `https://grafana.bxdatalab.com` | Configurável |
+| Argo CD | `https://argocd.bxdatalab.com` | Configurável |
+| MinIO Console | `https://minio.bxdatalab.com` | Configurável |
+| MinIO S3 API | `https://s3.bxdatalab.com` | Não (chamadas programáticas SigV4) |
+| dbt docs | `https://dbt-docs.bxdatalab.com` | Não (documentação pública) |
 
-**Prometheus** e **Metabase** propositalmente não passam pelo *tunnel* — só LAN (`192.168.18.27` e `192.168.18.26`). Prometheus é consultado pelo Grafana via DNS interno; Metabase é uma *peça opcional de BI* não citada no escopo principal do TCC.
+**Prometheus** e **Metabase** propositalmente não passam pelo *tunnel* — permanecem só na rede interna do cluster. Prometheus é consultado pelo Grafana via DNS interno; Metabase é uma *peça opcional de BI* fora do escopo principal do TCC.
 
 ---
 
