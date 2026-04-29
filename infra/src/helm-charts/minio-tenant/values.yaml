@@ -1,12 +1,17 @@
-## Secret with default environment variable configurations to be used by MinIO Tenant.
-## Not recommended for production deployments! Create the secret manually instead.
+## Secret com as credenciais root do MinIO. Pré-criado out-of-band:
+##   kubectl -n deepstorage create secret generic minio-env-configuration-data-lake \
+##     --from-literal=config.env='export MINIO_ROOT_USER="<user>"
+## export MINIO_ROOT_PASSWORD="<senha>"'
+## Annotado com argocd.argoproj.io/sync-options=Prune=false pra sobreviver ao sync.
 secrets:
+  ## existingSecret faz o template skipar a criação do Secret pelo chart
+  ## (vide templates/tenant-configuration.yaml) — usamos o secret pré-existente.
+  existingSecret: minio-env-configuration-data-lake
+  ## Campos abaixo ficam ignorados quando existingSecret está setado;
+  ## mantidos só pra documentar o nome canônico referenciado pelo tenant.
   name: minio-env-configuration-data-lake
-  # MinIO root user and password
-  accessKey: data-lake
-  secretKey: 12620ee6-2162-11ee-be56-0242ac120002
-  ## Set the value for existingSecret to use a pre created secret and dont create default one
-  # existingSecret: random-env-configuration
+  accessKey: ""
+  secretKey: ""
 ## MinIO Tenant Definition
 tenant:
   # Tenant name

@@ -494,10 +494,11 @@ extraEnv: |
     value: "minio_s3"
   - name: AIRFLOW__LOGGING__ENCRYPT_S3_LOGS
     value: "False"
-  # Connection inline (sem precisar criar via UI/Postgres). Endpoint é o
-  # service interno do MinIO; access/secret são as creds root do data-lake.
-  - name: AIRFLOW_CONN_MINIO_S3
-    value: "aws://data-lake:12620ee6-2162-11ee-be56-0242ac120002@?endpoint_url=http%3A%2F%2Fminio.deepstorage.svc.cluster.local%3A80&region_name=us-east-1"
+  # Connection do MinIO carregada via secret out-of-band (não inline pra
+  # evitar credencial em texto plano no git). Secret esperado:
+  #   kubectl -n orchestrator2 create secret generic airflow10-minio-conn \
+  #     --from-literal=AIRFLOW_CONN_MINIO_S3='aws://<user>:<pass>@?endpoint_url=...'
+  # Carregada via extraEnvFrom abaixo.
 # eg:
 # extraEnv: |
 #   - name: AIRFLOW__CORE__LOAD_EXAMPLES
@@ -508,6 +509,8 @@ extraEnv: |
 extraEnvFrom: |
   - secretRef:
       name: clickhouse-credentials
+  - secretRef:
+      name: airflow10-minio-conn
 # eg:
 # extraEnvFrom: |
 #   - secretRef:

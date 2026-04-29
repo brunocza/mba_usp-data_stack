@@ -184,14 +184,18 @@ additionalExchangeManagerProperties: {}
 eventListenerProperties: {}
 
 additionalCatalogs:
+   # NOTE: Trino não está deployado neste cluster (sem Application no ArgoCD).
+   # Para reativar com segurança, mover hive.s3.aws-{access,secret}-key
+   # para um Secret K8s (configmap-from-file ou tpl + envSubst) — não commitar
+   # credenciais literais.
    minio: |-
      connector.name=hive
      hive.metastore=file
      hive.s3-file-system-type=TRINO
      hive.metastore.catalog.dir=s3://trino/
      hive.allow-drop-table=true
-     hive.s3.aws-access-key=data-lake
-     hive.s3.aws-secret-key=12620ee6-2162-11ee-be56-0242ac120002
+     hive.s3.aws-access-key=<provided-via-secret>
+     hive.s3.aws-secret-key=<provided-via-secret>
      hive.s3.endpoint=http://minio.deepstorage.svc.Cluster.local
      hive.s3.path-style-access=true
      hive.s3.ssl.enabled=false
@@ -207,8 +211,8 @@ additionalCatalogs:
      connector.name=iceberg
      hive.metastore.uri=thrift://hive-metastore.metastore.svc.Cluster.local:9083
      iceberg.file-format=PARQUET
-     hive.s3.aws-access-key=data-lake
-     hive.s3.aws-secret-key=12620ee6-2162-11ee-be56-0242ac120002
+     hive.s3.aws-access-key=<provided-via-secret>
+     hive.s3.aws-secret-key=<provided-via-secret>
      hive.s3.endpoint=http://minio.deepstorage.svc.Cluster.local
      hive.s3.path-style-access=true
 

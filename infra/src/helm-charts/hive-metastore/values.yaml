@@ -24,8 +24,10 @@ conf:
     hive_metastore_uris: thrift://hive-metastore:9083
     hive.metastore.warehouse.dir: s3a://metastore/warehouse/
     fs.s3a.impl: org.apache.hadoop.fs.s3a.S3AFileSystem
-    fs.s3a.access.key: data-lake
-    fs.s3a.secret.key: 12620ee6-2162-11ee-be56-0242ac120002
+    # Credenciais MinIO injetadas via secret K8s — NÃO commitar valores literais.
+    # Para deploy real, parametrize via tpl + envFrom + Secret pré-criado.
+    fs.s3a.access.key: "<provided-via-secret>"
+    fs.s3a.secret.key: "<provided-via-secret>"
     fs.s3a.endpoint: http://minio.deepstorage.svc.Cluster.local
     fs.s3a.path.style.access: true
     fs.s3a.connection.ssl.enabled: false
