@@ -16,7 +16,7 @@ Notas para conversão MANUAL para .docx no template oficial USP:
   sem cores, sem negrito interno, sem bordas decorativas.
 - Figuras: título e fonte ABAIXO da imagem, fonte Arial 11.
 - Itálico em termos estrangeiros (exceto latim, que vai em itálico também).
-- Os blocos `<!-- FIGURA N — INSERIR IMAGEM AQUI ... -->` indicam o local
+- Os blocos `<!-- FIGURA N — INSERIR IMAGEM AQUI ... --!>` indicam o local
   exato onde inserir cada captura de tela no .docx, com o alvo do print
   descrito dentro do próprio comentário. Remover o bloco HTML após inserir
   a imagem correspondente.

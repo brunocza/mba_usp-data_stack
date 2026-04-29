@@ -1,25 +1,39 @@
 # MBA USP — Data Stack on k3s
 
-> Plataforma de dados completa em um cluster Kubernetes single-node, provisionada com Terraform sobre Proxmox VE, gerenciada via GitOps com ArgoCD, e desenvolvida como trabalho de conclusão do curso **MBA em Data Science & Analytics — ICMC/USP**.
+> Plataforma de dados completa em um cluster Kubernetes single-node, provisionada com Terraform sobre Proxmox VE, gerenciada via GitOps com ArgoCD, e desenvolvida como trabalho de conclusão do curso **MBA em Engenharia de Software — USP/Esalq**.
 
-Este repositório contém **toda a infraestrutura como código** do projeto: desde o provisionamento da VM base no Proxmox, passando pela instalação do k3s e MetalLB, até a implantação declarativa dos serviços de dados (Airflow, ClickHouse, MinIO, dbt, Grafana, Prometheus) e a exposição pública controlada via Cloudflare Tunnel com autenticação Zero Trust.
+Este repositório contém **toda a infraestrutura como código** do projeto: desde o provisionamento da VM base no Proxmox, passando pela instalação do k3s e MetalLB, até a implantação declarativa dos serviços de dados (Airflow, ClickHouse, MinIO, dbt, Grafana, Prometheus) e a exposição pública controlada via Cloudflare Tunnel.
 
-O objetivo didático é demonstrar, de ponta a ponta, como montar uma plataforma de dados **realista, reproduzível e observável** usando ferramentas open-source e práticas modernas de *platform engineering*.
+O objetivo didático é demonstrar, de ponta a ponta, como montar uma plataforma de dados **realista, reproduzível e observável** usando ferramentas open-source e práticas modernas de *platform engineering*. A pesquisa que dá nome ao TCC valida a arquitetura de medalhão (bronze→silver→gold) sobre 232 milhões de registros HVFHV (NYC TLC, ano de 2023) e contrasta os resultados com uma execução paralela em **Databricks SQL Serverless** para isolar o ganho atribuído à arquitetura de dados em si do ganho devido ao motor de execução.
+
+---
+
+## 📖 TCC e evidências experimentais
+
+| Artefato | Caminho | O que contém |
+|---|---|---|
+| **Trabalho de Conclusão (final)** | [`tcc/v2_TCC_Final.md`](tcc/v2_TCC_Final.md) | Documento completo entregue à banca: motivação, *stack*, metodologia (Yin 2018), resultados quantitativos do *medallion*, validação cruzada com Databricks e limitações |
+| Resultados preliminares (v1, congelado) | [`tcc/v1_ResultadosPreliminares.md`](tcc/v1_ResultadosPreliminares.md) | Versão de avaliação intermediária — mantida só por *baseline* histórico |
+| Plano de pesquisa | [`tcc/PLANO_TCC_FINAL.md`](tcc/PLANO_TCC_FINAL.md) | Estrutura aprovada com o orientador |
+| Evidências brutas | [`tcc/evidencias/`](tcc/evidencias/) | JSON de medições de tempo do *benchmark* Databricks (warm-ups + 5 medições por camada) |
+| Documentos de submissão | [`tcc/documentos/`](tcc/documentos/) | *Templates* USP/Esalq (folha de rosto, ficha, declarações) |
 
 ---
 
 ## Índice
 
-1. [Visão geral da arquitetura](#visão-geral-da-arquitetura)
-2. [Stack de tecnologias](#stack-de-tecnologias)
-3. [Aplicações expostas](#aplicações-expostas)
-4. [Layout do repositório](#layout-do-repositório)
-5. [Workflow de mudanças (git-first)](#workflow-de-mudanças-git-first)
-6. [Desenvolvimento local com dbt](#desenvolvimento-local-com-dbt)
-7. [Observabilidade](#observabilidade)
-8. [Segurança](#segurança)
-9. [Troubleshooting](#troubleshooting)
-10. [Provisionamento do zero](#provisionamento-do-zero)
+1. [TCC e evidências experimentais](#-tcc-e-evidências-experimentais)
+2. [Visão geral da arquitetura](#visão-geral-da-arquitetura)
+3. [Stack de tecnologias](#stack-de-tecnologias)
+4. [Aplicações expostas](#aplicações-expostas)
+5. [Layout do repositório](#layout-do-repositório)
+6. [Workflow de mudanças (git-first)](#workflow-de-mudanças-git-first)
+7. [Desenvolvimento local com dbt](#desenvolvimento-local-com-dbt)
+8. [Benchmarks e validação cruzada (TCC)](#benchmarks-e-validação-cruzada-tcc)
+9. [Observabilidade](#observabilidade)
+10. [Segurança](#segurança)
+11. [Troubleshooting](#troubleshooting)
+12. [Provisionamento do zero](#provisionamento-do-zero)
 
 ---
 
@@ -69,33 +83,36 @@ O tráfego do navegador jamais toca diretamente o cluster: ele passa pela edge d
 | Camada | Tecnologia | Versão | Papel |
 |---|---|---|---|
 | **Virtualização** | Proxmox VE + Terraform (`Telmate/proxmox`) | 3.0.1-rc1 | Provisiona a VM Ubuntu 22.04 a partir de um template cloud-init |
-| **Orquestração de containers** | k3s | v1.32.5+k3s1 | Distribuição leve de Kubernetes |
-| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs de um pool reservado na rede local para Services do tipo `LoadBalancer` |
-| **GitOps** | ArgoCD | | Reconcilia continuamente o estado do cluster com este repositório |
-| **Tunnel & autenticação** | Cloudflare Tunnel + Zero Trust Access | latest | Exposição pública sem porta aberta, com OTP por email |
-| **Orquestração de workflows** | Apache Airflow | 3.1.8 (chart 1.20.0) | DAGs sincronizadas via git-sync, executor Celery + Redis |
-| **Transformação de dados** | dbt-core + dbt-clickhouse | ~1.8.0 | Project `dags/dbt_demo/` materializa models em ClickHouse |
-| **Warehouse** | ClickHouse (chart Bitnami) | | Armazenamento analítico colunar |
-| **Data lake** | MinIO (operator + tenant) | | Object storage compatível com S3, bucket policies nativas |
-| **Métricas** | Prometheus + node-exporter + kube-state-metrics | 25.27.0 / 2.54.1 | Coleta de métricas do cluster e das aplicações |
-| **Dashboards** | Grafana | 8.5.1 / app 11.2 | Visualização, com dashboards provisionados via ConfigMap |
+| **Orquestração de containers** | k3s | v1.32.5+k3s1 | Distribuição leve de Kubernetes (single-node, control-plane no próprio nó) |
+| **Load balancer interno** | MetalLB | v0.13.12 | Atribui IPs de um pool reservado da LAN (192.168.18.21–58, **pinados por chart**) para Services `LoadBalancer` |
+| **GitOps** | Argo CD | latest | Reconcilia continuamente o estado do cluster com este repositório |
+| **Tunnel** | Cloudflare Tunnel (`cloudflared`) | latest | Exposição pública sem porta aberta; políticas de Access (Zero Trust + OTP) configuráveis por *application* no painel |
+| **Orquestração de workflows** | Apache Airflow | 3.1.8 (chart 1.20.0) | DAGs sincronizadas via git-sync, executor Celery + Redis; imagem custom `bx-airflow:3.1.8-cosmos1.14.0` |
+| **dbt em DAGs** | Astronomer Cosmos | 1.14.0 | Renderiza projetos dbt como tasks Airflow nativas (e expõe `dbt docs` em *sidecar*) |
+| **Transformação — ClickHouse** | dbt-core + dbt-clickhouse | 1.11.8 / 1.x | Projeto [`dags/dbt_demo/`](dags/dbt_demo/) materializa modelos no ClickHouse |
+| **Transformação — Databricks** | dbt-core + dbt-databricks | 1.11.8 / 1.11.7 | Projeto-espelho [`dbt_databricks/`](dbt_databricks/) usado **só para o *benchmark* comparativo** do TCC |
+| **Warehouse** | ClickHouse (chart Bitnami) | 25.5.2.47 | MergeTree colunar, instância única; PVC dedicada |
+| **Data lake** | MinIO (operator + tenant) | RELEASE.2024-x | Object storage S3-compat, *scrape* anônimo de métricas via `MINIO_PROMETHEUS_AUTH_TYPE=public` |
+| **Métricas** | Prometheus + node-exporter + kube-state-metrics | 25.27.0 / 2.54.1 | Coleta do cluster e dos *apps* (Airflow StatsD, ClickHouse nativo, MinIO V2) |
+| **Dashboards** | Grafana | 8.5.1 / app 11.2 | Provisionados via ConfigMap (folders Cluster / Airflow / ClickHouse / MinIO) |
+| **Validação cruzada** | Databricks SQL Serverless | warehouse 2X-Small | *Benchmark* Q1/Q2 do *medallion* sobre 1 mês HVFHV (jan/2023, 18,5 M linhas), executado por API REST |
 
 ---
 
 ## Aplicações expostas
 
-Todas servidas sob `*.bxdatalab.com` via Cloudflare Tunnel e protegidas por Zero Trust Access (exceto onde indicado):
+Todas servidas sob `*.bxdatalab.com` via Cloudflare Tunnel. Cloudflare Zero Trust Access pode ser anexado por *application* no painel (regra usual: `Emails ending in @usp.br` + IdP "One-time PIN"); essa camada é configurável por hostname e não depende de mudança no cluster.
 
-| Aplicação | URL | Protegido por Access? |
+| Aplicação | URL | LAN |
 |---|---|---|
-| Airflow | `https://airflow.bxdatalab.com` | ✅ |
-| Grafana | `https://grafana.bxdatalab.com` | ✅ |
-| ArgoCD | `https://argocd.bxdatalab.com` | ✅ |
-| MinIO Console | `https://minio.bxdatalab.com` | ✅ |
-| MinIO S3 API | `https://s3.bxdatalab.com` | ❌ (requer chamadas programáticas S3/SigV4) |
-| dbt docs | `https://dbt-docs.bxdatalab.com` | ❌ (documentação pública) |
+| Airflow | `https://airflow.bxdatalab.com` | `http://192.168.18.31:8080` |
+| Grafana | `https://grafana.bxdatalab.com` | `http://192.168.18.23` |
+| Argo CD | `https://argocd.bxdatalab.com` | `http://192.168.18.28` |
+| MinIO Console | `https://minio.bxdatalab.com` | `http://192.168.18.22:9090` |
+| MinIO S3 API | `https://s3.bxdatalab.com` | `http://192.168.18.24` |
+| dbt docs | `https://dbt-docs.bxdatalab.com` | `http://192.168.18.31:8081` (*sidecar* do `airflow10-api-server`) |
 
-**Prometheus** propositalmente não é exposto à internet — é consultado somente de dentro do cluster pelo Grafana, reduzindo a superfície de ataque.
+**Prometheus** e **Metabase** propositalmente não passam pelo *tunnel* — só LAN (`192.168.18.27` e `192.168.18.26`). Prometheus é consultado pelo Grafana via DNS interno; Metabase é uma *peça opcional de BI* não citada no escopo principal do TCC.
 
 ---
 
@@ -134,11 +151,24 @@ Todas servidas sob `*.bxdatalab.com` via Cloudflare Tunnel e protegidas por Zero
 │
 ├── dags/                       # DAGs do Airflow (lidas via git-sync)
 │   ├── example_dag.py
-│   ├── dbt_demo_dag.py         # pipeline que executa dbt_demo/
-│   └── dbt_demo/               # projeto dbt completo (models, profiles, schema)
+│   ├── fhvhv_pipeline_dag.py   # ingest mensal HVFHV → bronze (download + insert no CH)
+│   ├── benchmark_medallion_dag.py  # Q1/Q2 do TCC: 2 warmups + 5 medições por camada
+│   └── dbt_demo/               # projeto dbt ClickHouse (models bronze/silver/gold)
+│
+├── dbt_databricks/             # projeto dbt-espelho (Spark SQL) usado só pelo benchmark
+│   ├── models/{bronze,silver,gold}/
+│   ├── benchmark_q1q2.py       # script de medição via SQL Statements API
+│   └── README.md               # como rodar o benchmark Databricks
+│
+├── tcc/                        # documento, plano, evidências e templates de submissão
+│   ├── v2_TCC_Final.md         # entrega à banca
+│   ├── PLANO_TCC_FINAL.md
+│   ├── evidencias/             # JSON de medições brutas
+│   └── documentos/             # templates USP/Esalq
 │
 ├── dev/                        # [gitignored] sandbox local de desenvolvimento dbt
 │
+├── ENDERECOS-CLUSTER.md        # [gitignored] mapa de IPs / credenciais / MCP servers
 └── README.md                   # este arquivo
 ```
 
@@ -193,6 +223,32 @@ Quando um model amadurece, basta copiá-lo para `dags/dbt_demo/models/` e commit
 
 ---
 
+## Benchmarks e validação cruzada (TCC)
+
+A pesquisa do TCC mede o ganho real da arquitetura *medallion* (bronze→silver→gold) em duas configurações de execução: ClickHouse *single-node* on-prem (sob este cluster) e Databricks SQL Serverless gerenciado. O objetivo é separar o ganho atribuído ao **padrão arquitetural** do ganho atribuído ao **motor de execução**.
+
+### Pipeline de produção — `fhvhv_pipeline`
+Ingestão horária (com `max_active_runs=1`) que mantém 232 milhões de linhas HVFHV (NYC TLC, ano 2023) na camada *bronze* do ClickHouse, e materializa as camadas *silver* e *gold* via Cosmos. Tarefas: download dos *parquets* mensais → conversão para `Native` → `INSERT` em batch → `OPTIMIZE FINAL` → execução do projeto dbt.
+
+### Benchmark ClickHouse — DAG `benchmark_medallion`
+Mede tempo de duas perguntas analíticas (`Q1 = receita diária`, `Q2 = top borough pairs`) em cada camada (bronze/silver/gold) com 2 warm-ups e 5 medições. Tempos lidos do `query_log` do ClickHouse (`query_duration_ms` — *server-pure*). Resultados completos na seção 4 do TCC.
+
+### Benchmark Databricks — script `dbt_databricks/benchmark_q1q2.py`
+Executa as mesmas Q1/Q2 sobre um espelho do *medallion* construído em Spark SQL (mesma semântica, dialeto adaptado). Mede tempo via *wall-clock* na SQL Statements API. Saída em [`tcc/evidencias/databricks_benchmark.json`](tcc/evidencias/databricks_benchmark.json).
+
+```bash
+# Pré-requisitos: variáveis DATABRICKS_HOST / DATABRICKS_TOKEN /
+#                 DATABRICKS_HTTP_PATH / DATABRICKS_WAREHOUSE_ID
+cd dbt_databricks/
+uvx --with dbt-databricks --from dbt-core dbt build         # ~70s no 2X-Small
+uvx --with requests --from requests python3 benchmark_q1q2.py
+```
+
+### Achado central
+O **padrão de aceleração** intra-plataforma se preserva em ambos os motores; a **magnitude absoluta** difere por estrutura: ClickHouse com MergeTree pré-agregado serve a camada gold em microssegundos, enquanto o Databricks Serverless mantém um *floor* de latência de ~1 s por *query* devido ao runtime distribuído. Análise detalhada (Tabela 6 + caveat de resolução do `query_log` em torno de 1 ms) na seção 4 e nas Limitações do TCC.
+
+---
+
 ## Observabilidade
 
 O Grafana é provisionado com quatro *folders* de dashboards, cada um alimentado por uma ConfigMap separada para ficar abaixo do limite de 3 MiB do Kubernetes API:
@@ -219,9 +275,10 @@ Os *scrape targets* adicionais do Prometheus estão em `infra/src/helm-charts/pr
 
 ### Exposição controlada
 
-- **Cloudflare Zero Trust Access** em todos os hostnames públicos: o usuário recebe um código OTP por email antes sequer de ver a tela de login da aplicação, o que inviabiliza ataques de *credential stuffing* e força bruta.
-- **Bot Fight Mode** ativo na zona, bloqueando automaticamente crawlers maliciosos.
-- **Prometheus** não é roteado pelo túnel — permanece acessível somente via DNS interno do cluster.
+- **Cloudflare Tunnel** elimina a necessidade de IP público ou *port-forward* — o tráfego entra pela edge da Cloudflare, é encaminhado por *outbound connection* até os pods `cloudflared` e atinge os Services internos via DNS do Kubernetes.
+- **Cloudflare Zero Trust Access** pode ser anexado por *application* no painel; quando ativo, exige OTP por e-mail (ou outro IdP) antes mesmo da tela de *login* do app, inviabilizando *credential stuffing*. A política recomendada para os hostnames públicos é `Emails ending in @usp.br` + provider "One-time PIN".
+- **Bot Fight Mode** ativável na zona Cloudflare para bloquear *crawlers* maliciosos.
+- **Prometheus** e **Metabase** não são roteados pelo *tunnel* — permanecem acessíveis somente via LAN/DNS interno do cluster.
 
 ### Segredos
 
@@ -420,4 +477,6 @@ kubectl -n cloudflared get pods      # cloudflared conectado
 
 ## Licença e referências acadêmicas
 
-Este projeto é parte do trabalho de conclusão do MBA em Data Science & Analytics — ICMC/USP. As versões dos charts, dashboards e scripts foram escolhidas com base em compatibilidade e estabilidade observadas durante a implementação (abril de 2026). O histórico completo de decisões e a evolução do stack estão nos commits deste repositório (`git log --oneline`).
+Este projeto é parte do trabalho de conclusão do **MBA em Engenharia de Software — USP/Esalq**, sob orientação do Prof. Ernane José Xavier Costa. As versões dos *charts*, *dashboards* e *scripts* foram escolhidas com base em compatibilidade e estabilidade observadas durante a implementação (abril de 2026). O histórico completo de decisões e a evolução do *stack* estão nos *commits* deste repositório (`git log --oneline`).
+
+Documento da pesquisa: [`tcc/v2_TCC_Final.md`](tcc/v2_TCC_Final.md). Evidências experimentais brutas: [`tcc/evidencias/`](tcc/evidencias/).
